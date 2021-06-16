@@ -1,4 +1,5 @@
-Hippunfold
+Hippunfold - refactored to take in a single labelmap and image but keep all downstream outputs
+
 ==========
 
 .. image:: https://images.microbadger.com/badges/version/khanlab/hippunfold.svg
