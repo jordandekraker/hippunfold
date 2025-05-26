@@ -82,7 +82,7 @@ rule lamareg_to_template:
     log:
         bids_log(
             "lamareg_to_template",
-            **inputs.wildcards,
+            **inputs.subj_wildcards,
         ),
     shell:
         "lamar generate-warpfield --ants-threads 4 --synthseg-thread 4 --fixed {params.ref} --moving {input.img} --affine {output.affine} --inverse-affine {output.invaffine} --warpfield {output.warp} --inverse-warpfield {output.invwarp} --inverse-output-parc tmp0.nii.gz --moving-parc tmp1.nii.gz --fixed-parc tmp2.nii.gz --registered-parc tmp3.nii.gz --output-parc tmp4.nii.gz &> {log}" # these SHOULD be removed in lamareg soon

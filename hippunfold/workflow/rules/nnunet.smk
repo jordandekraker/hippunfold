@@ -96,9 +96,10 @@ rule run_inference:
         "mkdir -p {params.model_dir} {params.in_folder} {params.out_folder} && "
         "{params.cmd_copy_inputs} && "
         "tar -xf {input.model_tar} -C {params.model_dir} && "
+        "mv tempmodel/trained_models/Dataset001_multihist7 tempmodel/ && "
         "export nnUNet_results={params.model_dir} && "
         "export nnUNet_n_proc_DA={threads} && "
-        "nnUNetv2_predict -i {params.in_folder} -o {params.out_folder} -d 001 -c 3d_fullres {params.tta} -f 1 4 &> {log} && "
+        "nnUNetv2_predict -i {params.in_folder} -o {params.out_folder} -d 001 -c 3d_fullres {params.tta} &> {log} && "
         "cp {params.temp_lbl} {output.nnunet_seg}"
 
 

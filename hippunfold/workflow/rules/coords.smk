@@ -1,8 +1,8 @@
-
+import numpy as np
 
 def get_gm_labels(wildcards):
     lbl_list = " ".join(
-        [str(lbl) for lbl in config["laplace_labels"][wildcards.label]["IO"]["gm"]]
+        [str(lbl) for lbl in config["laplace_labels"][wildcards.label]["gm"]]
     )
     return lbl_list
 
@@ -20,14 +20,11 @@ def get_src_sink_labels(wildcards):
 
 
 def get_nan_labels(wildcards):
+    gm_labels = set(map(int, config["laplace_labels"][wildcards.label]["gm"]))
+    all_labels = set(np.arange(1, 18))
+    missing_labels = sorted(all_labels - gm_labels)
     lbl_list = " ".join(
-        [
-            str(lbl)
-            for lbl in config["laplace_labels"][wildcards.label]["AP"]["sink"]
-            + config["laplace_labels"][wildcards.label]["AP"]["src"]
-            + config["laplace_labels"][wildcards.label]["PD"]["sink"]
-            + config["laplace_labels"][wildcards.label]["PD"]["src"]
-        ]
+        [str(lbl) for lbl in missing_labels]
     )
     return lbl_list
 
@@ -156,7 +153,7 @@ rule prep_dseg_for_laynii:
         gm_labels=lambda wildcards: " ".join(
             [
                 str(lbl)
-                for lbl in config["laplace_labels"][wildcards.label][wildcards.dir][
+                for lbl in config["laplace_labels"][wildcards.label][
                     "gm"
                 ]
             ]
@@ -197,6 +194,66 @@ rule prep_dseg_for_laynii:
         "subj"
     shell:
         "c3d -background -1 {input} -as DSEG -retain-labels {params.gm_labels} -binarize -scale 3 -popas GM -push DSEG -retain-labels {params.src_labels} -binarize -scale 2 -popas WM -push DSEG -retain-labels {params.sink_labels} -binarize -scale 1 -popas PIAL -push GM -push WM -add -push PIAL -add -o {output}"
+
+ruleorder: smooth_synthlayer > laynii_layers
+
+rule smooth_synthlayer:
+    input:
+        dseg_tissue=get_input_for_shape_inject,
+    params:
+        gm_labels=lambda wildcards: " ".join(
+            [
+                str(lbl)
+                for lbl in config["laplace_labels"][wildcards.label][
+                    "gm"
+                ]
+            ]
+        ),
+        src_labels=lambda wildcards: " ".join(
+            [
+                str(lbl)
+                for lbl in config["laplace_labels"][wildcards.label][wildcards.dir][
+                    "src"
+                ]
+            ]
+        ),
+        sink_labels=lambda wildcards: " ".join(
+            [
+                str(lbl)
+                for lbl in config["laplace_labels"][wildcards.label][wildcards.dir][
+                    "sink"
+                ]
+            ]
+        ),
+        sigma = 1.0, # in voxels
+    output:
+        equidist=temp(
+            bids(
+                root=root,
+                datatype="coords",
+                dir="{dir,IO}",
+                label="{label}",
+                suffix="coords.nii.gz",
+                desc="equidist",
+                space="corobl",
+                hemi="{hemi}",
+                **inputs.subj_wildcards,
+            )
+        ),
+    conda:
+        conda_env("pyunfold")
+    log:
+        bids_log(
+            "smooth_synthlayer",
+            **inputs.subj_wildcards,
+            dir="{dir, IO}",
+            label="{label}",
+            hemi="{hemi}",
+        ),
+    group:
+        "subj"
+    script:
+        "../scripts/smooth_synthlayer.py"
 
 
 rule laynii_layers:

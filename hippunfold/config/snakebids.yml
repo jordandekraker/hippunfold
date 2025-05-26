@@ -256,7 +256,7 @@ tissue_atlas_mapping:
 #these will be downloaded to ~/.cache/hippunfold
 resource_urls:
   nnunet_model:
-    synthlayer: 'zenodo.org/record/8184230/files/trained_model.3d_fullres.Task100_synthlayer.nnUNetTrainerV2.model_best.tar'
+    synthlayer: 'zenodo.org/record/8184230/files/nnunetv2_synthlayer.tar'
   atlas:
     multihist7: 'www.dropbox.com/scl/fi/g07u7la7v1kwfgsty6ujc/atlas-multihist7_20250108.zip?rlkey=bi7wbdsm93upgnn3bmlv4f1hx&st=5iv33isc&dl=0'
   template:
@@ -333,72 +333,60 @@ shape_inject:
 
 laplace_labels:
   hipp:
+    gm:
+      - 1
+      - 2
+      - 3
+      - 4
     AP: 
-      gm:
-        - 1
-        - 8
       src:
-        - 5
-      sink:
-        - 6
-    PD:
-      gm:
-        - 1
-        - 8
-      src:
-        - 3
-      sink:
-        - 8   
-    IO:
-      gm:
-        - 1
-      src:
-        - 2
-        - 4
-        - 7
         - 9
+      sink:
+        - 10
+    PD:
+      src:
+        - 15
+      sink:
+        - 5
+        - 6
+    IO:
+      src:
+        - 7
+        - 8
       sink:
         - 0 
         - 10
+        - 13
+        - 14
+        - 18
   dentate:
-    AP:
-      gm:
-        - 8
-      src:
-        - 5
-      sink:
-        - 6
-    PD:
-      gm:
-        - 8
+    gm:
+      - 5
+      - 6
+    AP: 
       src:
         - 9
       sink:
         - 10
+    PD:
+      src:
+        - 12
+      sink:
+        - 11
     IO:
-      gm:
-        - 8
       src:
         - 1
-        - 3
-      sink:
         - 2
+        - 3
         - 4
+      sink:
+        - 0 
         - 7
-        - 9
+        - 8
         - 10
-        - 0
-
-      
-tight_crop_labels: #defines what labels to use for tight cropping (for upsampled ref)
-  hipp:
-    - 1
-  dentate:
-    - 8
-
-laminar_coords_res:
-  hipp: 0.3x0.3x0.3mm
-  dentate: 0.1x0.1x0.1mm
+        - 13
+         -14
+        - 18
 
 
 surf_thresholds:
