@@ -227,10 +227,10 @@ cifti_metric_types:
 xfm_identity: resources/etc/identity_xfm.txt
 xfm_identity_itk: resources/etc/identity_xfm_itk.txt
 
-template: 'CITI168'
+template: 'CITI168_slim'
 
 template_files:
-  CITI168:
+  CITI168_slim:
     T1w: T1w_space-corobl.nii.gz
     xfm_corobl: CoronalOblique_rigid.txt
     Mask_crop: Mask_200umCoronalOblique_hemi-{hemi}.nii.gz
@@ -260,7 +260,7 @@ resource_urls:
   atlas:
     multihist7: 'www.dropbox.com/scl/fi/g07u7la7v1kwfgsty6ujc/atlas-multihist7_20250108.zip?rlkey=bi7wbdsm93upgnn3bmlv4f1hx&st=5iv33isc&dl=0'
   template:
-    CITI168: 'files.ca-1.osf.io/v1/resources/v8acf/providers/osfstorage/65395bf0282745121fb86a93/?zip='
+    CITI168_slim: 'files.ca-1.osf.io/v1/resources/v8acf/providers/osfstorage/65395bf0282745121fb86a93/?zip='
     upenn: 'files.ca-1.osf.io/v1/resources/v8acf/providers/osfstorage/65395c1613d27b122a94ca09/?zip='
 
 
@@ -353,9 +353,11 @@ laplace_labels:
       src:
         - 7
         - 8
+        - 11
       sink:
         - 0 
         - 10
+        - 12
         - 13
         - 14
         - 18
