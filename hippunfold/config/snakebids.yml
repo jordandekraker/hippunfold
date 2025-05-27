@@ -223,10 +223,6 @@ cifti_metric_types:
 
 #--- workflow specific configuration -- 
 
-
-xfm_identity: resources/etc/identity_xfm.txt
-xfm_identity_itk: resources/etc/identity_xfm_itk.txt
-
 template: 'CITI168_slim'
 
 template_files:
@@ -235,10 +231,8 @@ template_files:
     xfm_corobl: CoronalOblique_rigid.txt
     Mask_crop: Mask_200umCoronalOblique_hemi-{hemi}.nii.gz
     synthseg: synthseg_space-corobl.nii.gz
-  upenn:
-      dseg: tpl-upenn_desc-hipptissue_dseg.nii.gz
-      layers: tpl-upenn_desc-layers_dseg.nii.gz
-      dseg_dentate: tpl-upenn_desc-hippdentate_dseg.nii.gz # hack: separate files for DG
+  upenn_layers:
+      layers: tpl-upenn_desc-hipptissue_layers.nii.gz
       hemi_wildcards:
         - R
    
@@ -325,8 +319,11 @@ shape_inject:
     - 4
     - 5
     - 6
+    - 7
   labels_reinsert:
     - 8
+  labels_overwrite:
+    - 7
   label_smoothing_stdev: '0.5x0.5x0.5mm'
 
 
@@ -390,6 +387,8 @@ laplace_labels:
          -14
         - 18
 
+resample_dseg_for_templatereg: 0.3x0.3x0.3mm
+unfoldreg_padding: 0x0x0vox
 
 surf_thresholds:
   inner: 0

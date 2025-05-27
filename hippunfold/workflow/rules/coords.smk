@@ -31,7 +31,16 @@ def get_nan_labels(wildcards):
 
 rule get_label_mask:
     input:
-        labelmap=get_input_for_shape_inject,
+        seg = bids(
+            root=root,
+            datatype="anat",
+            **inputs.subj_wildcards,
+            suffix="dseg.nii.gz",
+            desc="postproc",
+            space="corobl",
+            hemi="{hemi}",
+            label="{label}",
+        )
     params:
         labels=get_gm_labels,
     output:
@@ -58,7 +67,16 @@ rule get_label_mask:
 
 rule get_src_sink_mask:
     input:
-        labelmap=get_input_for_shape_inject,
+        seg = bids(
+            root=root,
+            datatype="anat",
+            **inputs.subj_wildcards,
+            suffix="dseg.nii.gz",
+            desc="postproc",
+            space="corobl",
+            hemi="{hemi}",
+            label="{label}",
+        )
     params:
         labels=get_src_sink_labels,
     output:
@@ -121,7 +139,16 @@ rule get_src_sink_sdt:
 
 rule get_nan_mask:
     input:
-        labelmap=get_input_for_shape_inject,
+        seg = bids(
+            root=root,
+            datatype="anat",
+            **inputs.subj_wildcards,
+            suffix="dseg.nii.gz",
+            desc="postproc",
+            space="corobl",
+            hemi="{hemi}",
+            label="{label}",
+        )
     params:
         labels=get_nan_labels,
     output:
@@ -148,7 +175,16 @@ rule get_nan_mask:
 
 rule prep_dseg_for_laynii:
     input:
-        dseg_tissue=get_input_for_shape_inject,
+        seg = bids(
+            root=root,
+            datatype="anat",
+            **inputs.subj_wildcards,
+            suffix="dseg.nii.gz",
+            desc="postproc",
+            space="corobl",
+            hemi="{hemi}",
+            label="{label}",
+        )
     params:
         gm_labels=lambda wildcards: " ".join(
             [
@@ -199,7 +235,16 @@ ruleorder: smooth_synthlayer > laynii_layers
 
 rule smooth_synthlayer:
     input:
-        dseg_tissue=get_input_for_shape_inject,
+        dseg_tissue = bids(
+            root=root,
+            datatype="anat",
+            **inputs.subj_wildcards,
+            suffix="dseg.nii.gz",
+            desc="postproc",
+            space="corobl",
+            hemi="{hemi}",
+            label="{label}",
+        )
     params:
         gm_labels=lambda wildcards: " ".join(
             [
