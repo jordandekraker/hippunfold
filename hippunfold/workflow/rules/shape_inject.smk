@@ -1,4 +1,3 @@
-
 # Template-based segmentation supports templates that have only a single hemisphere
 # by flipping it
 
@@ -57,10 +56,7 @@ def get_image_pairs(wildcards, input):
 
 
 def copy_or_flip(wildcards, file_to_process):
-    if (
-        wildcards.hemi
-        in config["template_files"]["upenn_layers"]["hemi_wildcards"]
-    ):
+    if wildcards.hemi == "R":
         cmd = f"cp {file_to_process}"
     else:
         cmd = f"c3d {file_to_process} -flip x -o"
@@ -73,7 +69,8 @@ rule import_template_dseg:
         / "../resources/upenn_layers/tpl-upenn_desc-hipptissue_layers.nii.gz",
     params:
         copy_or_flip_cmd=lambda wildcards, input: copy_or_flip(
-            wildcards, input.template)
+            wildcards, input.template
+        ),
     output:
         template_seg=temp(
             bids(
@@ -154,7 +151,7 @@ rule template_shape_lamareg:
     params:
         general_opts="-d 3 -m SSD",
         affine_opts="-moments 2 -det 1",
-        labelsmask = "1 2 3 4 5 6 7 8"
+        labelsmask="1 2 3 4 5 6 7 8",
     output:
         affine=temp(
             bids(
@@ -183,7 +180,7 @@ rule template_shape_lamareg:
                 hemi="{hemi}",
             )
         ),
-        out = temp(
+        out=temp(
             bids(
                 root=root,
                 **inputs.subj_wildcards,
@@ -201,42 +198,8 @@ rule template_shape_lamareg:
     log:
         bids_log("template_shape_lamareg", **inputs.subj_wildcards, hemi="{hemi}"),
     shell:
-        "lamar coregister --fixed {input.subject_seg} --moving {input.template_seg} --rev-affine {output.affine} --rev-warp-file {output.warp} --output {output.out} &> {log}" 
+        "lamar coregister --fixed {input.subject_seg} --moving {input.template_seg} --rev-affine {output.affine} --rev-warp-file {output.warp} --output {output.out} &> {log}"
 
-rule template_xfm_itk2ras_hemi:
-    input:
-        xfm_ras=bids(
-                root=root,
-                **inputs.subj_wildcards,
-                suffix="xfm.mat",
-                datatype="warps",
-                desc="lamareg",
-                from_="template",
-                to="subject",
-                space="corobl",
-                type_="itk",
-                hemi="{hemi}",
-            )
-    output:
-        xfm_ras=temp(
-            bids(
-                root=root,
-                **inputs.subj_wildcards,
-                suffix="xfm.mat",
-                datatype="warps",
-                desc="lamareg",
-                from_="template",
-                to="subject",
-                space="corobl",
-                type_="ras",
-                hemi="{hemi}",
-            )),
-    conda:
-        conda_env("c3d")
-    group:
-        "subj"
-    shell:
-        "c3d_affine_tool -itk {input} -o {output}"
 
 def get_inject_scaling_opt(wildcards):
     """sets the smoothness of the greedy template shape injection deformation"""
@@ -258,7 +221,7 @@ rule template_shape_reg:
             hemi="{hemi}",
             suffix="dsegsplit",
         ),
-        subject_seg= bids(
+        subject_seg=bids(
             root=root,
             datatype="anat",
             **inputs.subj_wildcards,

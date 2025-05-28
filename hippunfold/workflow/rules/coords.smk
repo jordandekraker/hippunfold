@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def get_gm_labels(wildcards):
     lbl_list = " ".join(
         [str(lbl) for lbl in config["laplace_labels"][wildcards.label]["gm"]]
@@ -23,15 +24,13 @@ def get_nan_labels(wildcards):
     gm_labels = set(map(int, config["laplace_labels"][wildcards.label]["gm"]))
     all_labels = set(np.arange(1, 18))
     missing_labels = sorted(all_labels - gm_labels)
-    lbl_list = " ".join(
-        [str(lbl) for lbl in missing_labels]
-    )
+    lbl_list = " ".join([str(lbl) for lbl in missing_labels])
     return lbl_list
 
 
 rule get_label_mask:
     input:
-        seg = bids(
+        seg=bids(
             root=root,
             datatype="anat",
             **inputs.subj_wildcards,
@@ -39,7 +38,7 @@ rule get_label_mask:
             desc="postproc",
             space="corobl",
             hemi="{hemi}",
-        )
+        ),
     params:
         labels=get_gm_labels,
     output:
@@ -63,10 +62,9 @@ rule get_label_mask:
         "c3d {input} -background -1 -retain-labels {params} -binarize {output}"
 
 
-
 rule get_src_sink_mask:
     input:
-        seg = bids(
+        seg=bids(
             root=root,
             datatype="anat",
             **inputs.subj_wildcards,
@@ -74,7 +72,7 @@ rule get_src_sink_mask:
             desc="postproc",
             space="corobl",
             hemi="{hemi}",
-        )
+        ),
     params:
         labels=get_src_sink_labels,
     output:
@@ -137,7 +135,7 @@ rule get_src_sink_sdt:
 
 rule get_nan_mask:
     input:
-        seg = bids(
+        seg=bids(
             root=root,
             datatype="anat",
             **inputs.subj_wildcards,
@@ -145,7 +143,7 @@ rule get_nan_mask:
             desc="postproc",
             space="corobl",
             hemi="{hemi}",
-        )
+        ),
     params:
         labels=get_nan_labels,
     output:
@@ -172,7 +170,7 @@ rule get_nan_mask:
 
 rule prep_dseg_for_laynii:
     input:
-        seg = bids(
+        seg=bids(
             root=root,
             datatype="anat",
             **inputs.subj_wildcards,
@@ -180,15 +178,10 @@ rule prep_dseg_for_laynii:
             desc="postproc",
             space="corobl",
             hemi="{hemi}",
-        )
+        ),
     params:
         gm_labels=lambda wildcards: " ".join(
-            [
-                str(lbl)
-                for lbl in config["laplace_labels"][wildcards.label][
-                    "gm"
-                ]
-            ]
+            [str(lbl) for lbl in config["laplace_labels"][wildcards.label]["gm"]]
         ),
         src_labels=lambda wildcards: " ".join(
             [
@@ -227,11 +220,13 @@ rule prep_dseg_for_laynii:
     shell:
         "c3d -background -1 {input} -as DSEG -retain-labels {params.gm_labels} -binarize -scale 3 -popas GM -push DSEG -retain-labels {params.src_labels} -binarize -scale 2 -popas WM -push DSEG -retain-labels {params.sink_labels} -binarize -scale 1 -popas PIAL -push GM -push WM -add -push PIAL -add -o {output}"
 
+
 ruleorder: smooth_synthlayer > laynii_layers
+
 
 rule smooth_synthlayer:
     input:
-        dseg_tissue = bids(
+        dseg_tissue=bids(
             root=root,
             datatype="anat",
             **inputs.subj_wildcards,
@@ -239,15 +234,10 @@ rule smooth_synthlayer:
             desc="postproc",
             space="corobl",
             hemi="{hemi}",
-        )
+        ),
     params:
         gm_labels=lambda wildcards: " ".join(
-            [
-                str(lbl)
-                for lbl in config["laplace_labels"][wildcards.label][
-                    "gm"
-                ]
-            ]
+            [str(lbl) for lbl in config["laplace_labels"][wildcards.label]["gm"]]
         ),
         src_labels=lambda wildcards: " ".join(
             [
@@ -265,7 +255,7 @@ rule smooth_synthlayer:
                 ]
             ]
         ),
-        sigma = 1.0, # in voxels
+        sigma=1.0,  # in voxels
     output:
         equidist=temp(
             bids(
@@ -340,5 +330,6 @@ rule laynii_layers:
     shell:
         "cp {input} dseg.nii.gz && "
         "LN2_LAYERS  -rim dseg.nii.gz &> {log} && "
-        # "LN2_LAYERS  -rim dseg.nii.gz -equivol &> {log} && "
+
         "cp dseg_metric_equidist.nii.gz {output.equidist}"
+        # "LN2_LAYERS  -rim dseg.nii.gz -equivol &> {log} && "

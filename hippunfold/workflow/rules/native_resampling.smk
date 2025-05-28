@@ -364,17 +364,19 @@ rule warp_gii_corobl_to_orig:
             type_="itk",
         ),
     output:
-        gii=temp(bids(
-            root=root,
-            datatype="{surfdir}",
-            den="{density}",
-            desc="warp",
-            suffix="{surfname}.surf.gii",
-            space="{modality,T1w|T2w}",
-            hemi="{hemi}",
-            label="{label,hipp|dentate}",
-            **inputs.subj_wildcards,
-        )),
+        gii=temp(
+            bids(
+                root=root,
+                datatype="{surfdir}",
+                den="{density}",
+                desc="warp",
+                suffix="{surfname}.surf.gii",
+                space="{modality,T1w|T2w}",
+                hemi="{hemi}",
+                label="{label,hipp|dentate}",
+                **inputs.subj_wildcards,
+            )
+        ),
     conda:
         conda_env("workbench")
     group:
@@ -385,17 +387,19 @@ rule warp_gii_corobl_to_orig:
 
 rule affine_gii_corobl_to_orig:
     input:
-        gii=temp(bids(
-            root=root,
-            datatype="{surfdir}",
-            den="{density}",
-            desc="warp",
-            suffix="{surfname}.surf.gii",
-            space="{modality,T1w|T2w}",
-            hemi="{hemi}",
-            label="{label,hipp|dentate}",
-            **inputs.subj_wildcards,
-        )),
+        gii=temp(
+            bids(
+                root=root,
+                datatype="{surfdir}",
+                den="{density}",
+                desc="warp",
+                suffix="{surfname}.surf.gii",
+                space="{modality,T1w|T2w}",
+                hemi="{hemi}",
+                label="{label,hipp|dentate}",
+                **inputs.subj_wildcards,
+            )
+        ),
         xfm=bids(
             root=root,
             datatype="warps",

@@ -17,7 +17,7 @@ source_labels = [int(x) for x in snakemake.params.src_labels.split()]
 logger.info("loaded label lists")
 
 for i in gm_labels:
-    newimg[lbl.get_fdata() == i] = (i - min(gm_labels) + 1) / (len(gm_labels)+1)
+    newimg[lbl.get_fdata() == i] = (i - min(gm_labels) + 1) / (len(gm_labels) + 1)
 for i in sink_labels:
     newimg[lbl.get_fdata() == i] = 1
 logger.info("initial IO guess")

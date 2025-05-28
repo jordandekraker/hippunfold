@@ -223,20 +223,6 @@ cifti_metric_types:
 
 #--- workflow specific configuration -- 
 
-template: 'CITI168_slim'
-
-template_files:
-  CITI168_slim:
-    T1w: T1w_space-corobl.nii.gz
-    xfm_corobl: CoronalOblique_rigid.txt
-    Mask_crop: Mask_200umCoronalOblique_hemi-{hemi}.nii.gz
-    synthseg: synthseg_space-corobl.nii.gz
-  upenn_layers:
-      layers: tpl-upenn_desc-hipptissue_layers.nii.gz
-      hemi_wildcards:
-        - R
-   
-
 tissue_atlas_mapping:
   tissue:
     dg: 5,6
@@ -253,9 +239,6 @@ resource_urls:
     synthlayer: 'zenodo.org/record/8184230/files/nnunetv2_synthlayer.tar'
   atlas:
     multihist7: 'www.dropbox.com/scl/fi/g07u7la7v1kwfgsty6ujc/atlas-multihist7_20250108.zip?rlkey=bi7wbdsm93upgnn3bmlv4f1hx&st=5iv33isc&dl=0'
-  template:
-    CITI168_slim: 'files.ca-1.osf.io/v1/resources/v8acf/providers/osfstorage/65395bf0282745121fb86a93/?zip='
-    upenn: 'files.ca-1.osf.io/v1/resources/v8acf/providers/osfstorage/65395c1613d27b122a94ca09/?zip='
 
 
 unfold_vol_ref:

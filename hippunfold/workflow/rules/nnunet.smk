@@ -1,4 +1,3 @@
-
 def get_model_tar():
     model_name = config["nnunet_model"]
 
@@ -11,9 +10,7 @@ def get_model_tar():
 
 rule download_nnunet_model:
     params:
-        url=(
-            config["resource_urls"]["nnunet_model"][config["nnunet_model"]]
-        ),
+        url=(config["resource_urls"]["nnunet_model"][config["nnunet_model"]]),
         model_dir=Path(download_dir) / "model",
     output:
         model_tar=get_model_tar(),
@@ -116,12 +113,11 @@ rule qc_nnunet_dice:
                 hemi="{hemi}",
             )
         ),
-        template_dir=Path(download_dir) / "template" / config["template"],
     params:
-        hipp_lbls=[1, 2, 3,4,5,6,7,8],
-        ref=lambda wildcards, input: (
-            Path(input.template_dir)
-            / config["template_files"][config["template"]]["Mask_crop"].format(
+        hipp_lbls=[1, 2, 3, 4, 5, 6, 7, 8],
+        ref=lambda wildcards: (
+            Path(workflow.basedir)
+            / "../resources/CITI168-slim/Mask_200umCoronalOblique_hemi-{hemi}.nii.gz.nii.gz".format(
                 **wildcards
             )
         ),

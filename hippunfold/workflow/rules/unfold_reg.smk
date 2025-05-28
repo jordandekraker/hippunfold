@@ -1,4 +1,3 @@
-
 # unfold ref nifti
 rule create_unfold_ref:
     params:
@@ -29,7 +28,6 @@ rule create_unfold_ref:
         conda_env("c3d")
     shell:
         "c3d -create {params.dims} {params.voxdims}mm -origin {params.origin}mm -orient {params.orient} -o {output.nii}"
-
 
 
 rule extract_unfold_ref_slice:

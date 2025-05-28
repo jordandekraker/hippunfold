@@ -5,17 +5,11 @@ rule qc_reg_to_template:
             datatype="anat",
             **inputs.subj_wildcards,
             suffix="{modality}.nii.gz",
-            space=config["template"],
-            desc="affine",
+            space="template",
         ),
-        template_dir=Path(download_dir) / "template" / config["template"],
     params:
-        ref=lambda wildcards, input: str(
-            Path(input.template_dir)
-            / config["template_files"][config["template"]][wildcards.modality].format(
-                **wildcards
-            )
-        ),
+        ref=Path(workflow.basedir)
+        / "../resources/CITI168-slim/T1w_space-corobl_1mm.nii.gz",
     output:
         png=report(
             bids(
@@ -24,7 +18,7 @@ rule qc_reg_to_template:
                 **inputs.subj_wildcards,
                 suffix="regqc.png",
                 from_="{modality}",
-                to=config["template"],
+                to="template",
             ),
             caption="../report/t1w_template_regqc.rst",
             category="Registration QC",

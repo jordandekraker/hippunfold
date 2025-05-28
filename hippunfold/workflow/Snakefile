@@ -20,11 +20,8 @@ template_modality = False
 
 # set the lists used for output spaces
 ref_spaces.append(config["modality"])
-crop_ref_spaces.append("crop"+config["modality"])
-if (
-    config["modality"] == "dsegtissue"
-    or "corobl" in config["output_spaces"]
-):
+crop_ref_spaces.append("crop" + config["modality"])
+if config["modality"] == "dsegtissue" or "corobl" in config["output_spaces"]:
     ref_spaces.append("corobl")
 
 

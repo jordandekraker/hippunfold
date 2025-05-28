@@ -50,15 +50,23 @@ rule resample_unet_crop:
             space="corobl",
             hemi="{hemi}",
         ),
-        xfm=bids(
+        affine=bids(
             root=root,
             datatype="warps",
-            **inputs.subj_wildcards,
             suffix="xfm.mat",
-            from_="{modality}",
+            from_=config["modality"],
             to="corobl",
-            desc="affine",
             type_="itk",
+            **inputs[config["modality"]].wildcards,
+        ),
+        warp=bids(
+            root=root,
+            datatype="warps",
+            suffix="xfm.nii.gz",
+            from_=config["modality"],
+            to="corobl",
+            type_="itk",
+            **inputs[config["modality"]].wildcards,
         ),
         ref=bids(
             root=root,
@@ -86,7 +94,7 @@ rule resample_unet_crop:
         "subj"
     shell:
         "ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS={threads} "
-        "antsApplyTransforms -d 3 --interpolation MultiLabel -i {input.nii} -o {output.nii} -r {input.ref}  -t [{input.xfm},1]"
+        "antsApplyTransforms -d 3 --interpolation MultiLabel -i {input.nii} -o {output.nii} -r {input.ref} -t {input.warp} {input.affine}"
 
 
 rule resample_postproc_crop:
@@ -101,15 +109,23 @@ rule resample_postproc_crop:
             hemi="{hemi}",
             label=config["autotop_labels"][-1],
         ),
-        xfm=bids(
+        affine=bids(
             root=root,
             datatype="warps",
-            **inputs.subj_wildcards,
             suffix="xfm.mat",
-            from_="{modality}",
+            from_=config["modality"],
             to="corobl",
-            desc="affine",
             type_="itk",
+            **inputs[config["modality"]].wildcards,
+        ),
+        warp=bids(
+            root=root,
+            datatype="warps",
+            suffix="xfm.nii.gz",
+            from_=config["modality"],
+            to="corobl",
+            type_="itk",
+            **inputs[config["modality"]].wildcards,
         ),
         ref=bids(
             root=root,
@@ -137,7 +153,7 @@ rule resample_postproc_crop:
         "subj"
     shell:
         "ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS={threads} "
-        "antsApplyTransforms -d 3 --interpolation MultiLabel -i {input.nii} -o {output.nii} -r {input.ref}  -t [{input.xfm},1]"
+        "antsApplyTransforms -d 3 --interpolation MultiLabel -i {input.nii} -o {output.nii} -r {input.ref} -t {input.warp} {input.affine}"
 
 
 rule resample_subfields_crop:
@@ -153,14 +169,23 @@ rule resample_subfields_crop:
             label="{label}",
             **inputs.subj_wildcards,
         ),
-        xfm=bids(
+        affine=bids(
             root=root,
             datatype="warps",
-            **inputs.subj_wildcards,
             suffix="xfm.mat",
-            from_="{modality}",
+            from_=config["modality"],
             to="corobl",
             type_="itk",
+            **inputs[config["modality"]].wildcards,
+        ),
+        warp=bids(
+            root=root,
+            datatype="warps",
+            suffix="xfm.nii.gz",
+            from_=config["modality"],
+            to="corobl",
+            type_="itk",
+            **inputs[config["modality"]].wildcards,
         ),
         ref=bids(
             root=root,
@@ -188,7 +213,7 @@ rule resample_subfields_crop:
         "subj"
     shell:
         "ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS={threads} "
-        "antsApplyTransforms -d 3 --interpolation MultiLabel -i {input.nii} -o {output.nii} -r {input.ref}  -t [{input.xfm},1]"
+        "antsApplyTransforms -d 3 --interpolation MultiLabel -i {input.nii} -o {output.nii} -r {input.ref} -t {input.warp} {input.affine}"
 
 
 rule resample_coords_crop:
@@ -204,15 +229,23 @@ rule resample_coords_crop:
             hemi="{hemi}",
             **inputs.subj_wildcards,
         ),
-        xfm=bids(
+        affine=bids(
             root=root,
             datatype="warps",
-            **inputs.subj_wildcards,
             suffix="xfm.mat",
-            from_="{modality}",
+            from_=config["modality"],
             to="corobl",
-            desc="affine",
             type_="itk",
+            **inputs[config["modality"]].wildcards,
+        ),
+        warp=bids(
+            root=root,
+            datatype="warps",
+            suffix="xfm.nii.gz",
+            from_=config["modality"],
+            to="corobl",
+            type_="itk",
+            **inputs[config["modality"]].wildcards,
         ),
         ref=bids(
             root=root,
@@ -240,7 +273,7 @@ rule resample_coords_crop:
         "subj"
     shell:
         "ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS={threads} "
-        "antsApplyTransforms -d 3 --interpolation NearestNeighbor -i {input.nii} -o {output.nii} -r {input.ref}  -t [{input.xfm},1]"
+        "antsApplyTransforms -d 3 --interpolation NearestNeighbor -i {input.nii} -o {output.nii} -r {input.ref} -t {input.warp} {input.affine}"
 
 
 rule resample_to_crop:
@@ -275,18 +308,3 @@ rule resample_to_crop:
     shell:
         "ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS={threads} "
         "antsApplyTransforms -d 3 --interpolation Linear -i {input.nii} -o {output.nii} -r {input.ref} "
-
-
-def get_xfm_t2_to_t1():
-    xfm = bids(
-        root=root,
-        datatype="warps",
-        **inputs.subj_wildcards,
-        suffix="xfm.mat",
-        from_="T2w",
-        to="{modality}",
-        desc="rigid",
-        type_="itk",
-    )
-    return xfm
-

@@ -3,11 +3,12 @@ from lib import utils as utils
 
 download_dir = utils.get_download_dir()
 
-def get_inputs(): # TODO: swap this in
+
+def get_inputs():  # TODO: swap this in
     if config["modality"] == "multires":
         return inputs["T1w"] + inputs["T2w"] + inputs["FLAIR"]
     else:
-        return inputs[config["modality"]]   
+        return inputs[config["modality"]]
 
 
 rule import_any_modality:
@@ -19,7 +20,7 @@ rule import_any_modality:
             datatype="anat",
             suffix=config["modality"] + ".nii.gz",
             **inputs[config["modality"]].wildcards,
-        )
+        ),
     group:
         "subj"
     shell:
@@ -34,10 +35,10 @@ rule lamareg_to_template:
             suffix=config["modality"] + ".nii.gz",
             **inputs[config["modality"]].wildcards,
         ),
-        template_dir=Path(download_dir) / "template" / config["template"],
-    params:
-        ref=lambda wildcards, input: Path(input.template_dir)
-        / config["template_files"][config["template"]]["T1w"].format(**wildcards),
+        template_img=Path(workflow.basedir)
+        / "../resources/CITI168-slim/T1w_space-corobl_1mm.nii.gz",
+        template_seg=Path(workflow.basedir)
+        / "../resources/CITI168-slim/synthseg_space-corobl.nii.gz",
     output:
         affine=bids(
             root=root,
@@ -75,19 +76,26 @@ rule lamareg_to_template:
             type_="itk",
             **inputs[config["modality"]].wildcards,
         ),
+        out=bids(
+            root=root,
+            datatype="anat",
+            **inputs.wildcards,
+            suffix=config["modality"],
+            space="template",
+        ),
     shadow:
         "minimal"
     # conda:
     #     conda_env("lamar")
     group:
-        "subj" 
+        "subj"
     log:
         bids_log(
             "lamareg_to_template",
             **inputs.subj_wildcards,
         ),
     shell:
-        "lamar register --fixed {params.ref} --moving {input.img} --affine {output.affine} --inverse-affine {output.invaffine} --warpfield {output.warp} --inverse-warpfield {output.invwarp} --output tmp.nii.gz &> {log}" 
+        "lamar register --fixed {input.template_img} --fixed-parc {input.template_seg} --moving {input.img} --affine {output.affine} --inverse-affine {output.invaffine} --warpfield {output.warp} --inverse-warpfield {output.invwarp} --output {output.out} &> {log}"
 
 
 rule apply_transforms:
@@ -98,7 +106,8 @@ rule apply_transforms:
             suffix=config["modality"] + ".nii.gz",
             **inputs[config["modality"]].wildcards,
         ),
-        template_dir=Path(download_dir) / "template" / config["template"],
+        template_img=Path(workflow.basedir)
+        / "../resources/CITI168-slim/T1w_space-corobl_1mm.nii.gz",
         affine=bids(
             root=root,
             datatype="warps",
@@ -117,9 +126,6 @@ rule apply_transforms:
             type_="itk",
             **inputs[config["modality"]].wildcards,
         ),
-    params:
-        ref=lambda wildcards, input: Path(input.template_dir)
-        / config["template_files"][config["template"]]["Mask_crop"].format(**wildcards),
     output:
         img=bids(
             root=root,
@@ -138,35 +144,17 @@ rule apply_transforms:
             hemi="{hemi}",
         ),
     shell:
-        "lamar apply-warp --affine {input.affine} --warp {input.warp} --moving {input.img} --reference {params.ref} --output {output.img} &> {log}"
+        "lamar apply-warp --affine {input.affine} --warp {input.warp} --moving {input.img} --reference {input.template_img} --output {output.img} &> {log}"
 
 
-# TODO: refine registrations using the raw images and the above initializations
+# TODO: refine registrations using the raw images after the above initializations
 
 
 rule template_xfm_itk2ras:
     input:
-        xfm_ras=bids(
-            root=root,
-            datatype="warps",
-            **inputs.subj_wildcards,
-            suffix="xfm.mat",
-            from_="{modality}",
-            to="corobl",
-            type_="itk",
-        ),
+        "{prefix}_type-itk_xfm.mat",
     output:
-        xfm_ras=temp(
-            bids(
-                root=root,
-                datatype="warps",
-                **inputs.subj_wildcards,
-                suffix="xfm.mat",
-                from_="{modality}",
-                to="corobl",
-                type_="ras",
-            )
-        ),
+        "{prefix}_type-ras_xfm.mat",
     conda:
         conda_env("c3d")
     group:
