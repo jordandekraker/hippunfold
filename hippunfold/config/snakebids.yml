@@ -321,9 +321,11 @@ shape_inject:
     - 6
     - 7
   labels_reinsert:
-    - 8
+    - 8 # cysts
+    - 13 # alveus
   labels_overwrite:
     - 7
+    - 0
   label_smoothing_stdev: '0.5x0.5x0.5mm'
 
 

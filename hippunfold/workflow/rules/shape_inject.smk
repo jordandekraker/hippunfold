@@ -130,6 +130,114 @@ rule resample_template_dseg_tissue_for_reg:
         "c3d {input} -int 0 {params.resample_cmd} {params.crop_cmd} -o {output}"
 
 
+rule template_shape_lamareg:
+    # this will provide a coarse registration and hopefully align the outer contours before finer registration with greedy
+    input:
+        template_seg=bids(
+            root=root,
+            datatype="anat",
+            space="template",
+            **inputs.subj_wildcards,
+            desc="hipptissueresampled",
+            hemi="{hemi}",
+            suffix="dseg.nii.gz",
+        ),
+        subject_seg=bids(
+            root=root,
+            datatype="anat",
+            **inputs.subj_wildcards,
+            desc="nnunet",
+            space="corobl",
+            hemi="{hemi}",
+            suffix="dseg.nii.gz",
+        ),
+    params:
+        general_opts="-d 3 -m SSD",
+        affine_opts="-moments 2 -det 1",
+        labelsmask = "1 2 3 4 5 6 7 8"
+    output:
+        affine=temp(
+            bids(
+                root=root,
+                **inputs.subj_wildcards,
+                suffix="xfm.mat",
+                datatype="warps",
+                desc="lamareg",
+                from_="template",
+                to="subject",
+                space="corobl",
+                type_="itk",
+                hemi="{hemi}",
+            )
+        ),
+        warp=temp(
+            bids(
+                root=root,
+                **inputs.subj_wildcards,
+                suffix="xfm.nii.gz",
+                datatype="warps",
+                desc="lamareg",
+                from_="template",
+                to="subject",
+                space="corobl",
+                hemi="{hemi}",
+            )
+        ),
+        out = temp(
+            bids(
+                root=root,
+                **inputs.subj_wildcards,
+                suffix="dseg.nii.gz",
+                datatype="anat",
+                desc="lamareg",
+                space="corobl",
+                hemi="{hemi}",
+            )
+        ),
+    group:
+        "subj"
+    # conda:
+    #     conda_env("lamar")
+    log:
+        bids_log("template_shape_lamareg", **inputs.subj_wildcards, hemi="{hemi}"),
+    shell:
+        "lamar coregister --fixed {input.subject_seg} --moving {input.template_seg} --rev-affine {output.affine} --rev-warp-file {output.warp} --output {output.out} &> {log}" 
+
+rule template_xfm_itk2ras_hemi:
+    input:
+        xfm_ras=bids(
+                root=root,
+                **inputs.subj_wildcards,
+                suffix="xfm.mat",
+                datatype="warps",
+                desc="lamareg",
+                from_="template",
+                to="subject",
+                space="corobl",
+                type_="itk",
+                hemi="{hemi}",
+            )
+    output:
+        xfm_ras=temp(
+            bids(
+                root=root,
+                **inputs.subj_wildcards,
+                suffix="xfm.mat",
+                datatype="warps",
+                desc="lamareg",
+                from_="template",
+                to="subject",
+                space="corobl",
+                type_="ras",
+                hemi="{hemi}",
+            )),
+    conda:
+        conda_env("c3d")
+    group:
+        "subj"
+    shell:
+        "c3d_affine_tool -itk {input} -o {output}"
+
 def get_inject_scaling_opt(wildcards):
     """sets the smoothness of the greedy template shape injection deformation"""
 
@@ -158,20 +266,14 @@ rule template_shape_reg:
             desc="nnunet",
             space="corobl",
             hemi="{hemi}",
-        )
-    params:
-        general_opts="-d 3 -m SSD",
-        affine_opts="-moments 2 -det 1",
-        greedy_opts=get_inject_scaling_opt,
-        img_pairs=get_image_pairs,
-    output:
-        matrix=temp(
+        ),
+        affine=temp(
             bids(
                 root=root,
                 **inputs.subj_wildcards,
-                suffix="xfm.txt",
+                suffix="xfm.mat",
                 datatype="warps",
-                desc="moments",
+                desc="lamareg",
                 from_="template",
                 to="subject",
                 space="corobl",
@@ -179,6 +281,25 @@ rule template_shape_reg:
                 hemi="{hemi}",
             )
         ),
+        warp=temp(
+            bids(
+                root=root,
+                **inputs.subj_wildcards,
+                suffix="xfm.nii.gz",
+                datatype="warps",
+                desc="lamareg",
+                from_="template",
+                to="subject",
+                space="corobl",
+                hemi="{hemi}",
+            )
+        ),
+    params:
+        general_opts="-d 3 -m SSD",
+        affine_opts="-moments 2 -det 1",
+        greedy_opts=get_inject_scaling_opt,
+        img_pairs=get_image_pairs,
+    output:
         warp=temp(
             bids(
                 root=root,
@@ -200,9 +321,7 @@ rule template_shape_reg:
     log:
         bids_log("template_shape_reg", **inputs.subj_wildcards, hemi="{hemi}"),
     shell:
-        #affine (with moments), then greedy
-        "greedy -threads {threads} {params.general_opts} {params.affine_opts} {params.img_pairs} -o {output.matrix}  &> {log} && "
-        "greedy -threads {threads} {params.general_opts} {params.greedy_opts} {params.img_pairs} -it {output.matrix} -o {output.warp} &>> {log}"
+        "greedy -threads {threads} {params.general_opts} {params.greedy_opts} {params.img_pairs} -ia {input.affine} -it {input.warp} -o {output.warp} &>> {log}"
 
 
 rule template_shape_inject:
@@ -223,18 +342,6 @@ rule template_shape_inject:
             suffix="dseg.nii.gz",
             desc="nnunet",
             space="corobl",
-            hemi="{hemi}",
-        ),
-        matrix=bids(
-            root=root,
-            **inputs.subj_wildcards,
-            suffix="xfm.txt",
-            datatype="warps",
-            desc="moments",
-            from_="template",
-            to="subject",
-            space="corobl",
-            type_="ras",
             hemi="{hemi}",
         ),
         warp=bids(
@@ -260,7 +367,6 @@ rule template_shape_inject:
                 desc="inject",
                 space="corobl",
                 hemi="{hemi}",
-                label="{label}",
             )
         ),
     log:
@@ -268,7 +374,6 @@ rule template_shape_inject:
             "template_shape_inject",
             **inputs.subj_wildcards,
             hemi="{hemi}",
-            label="{label}",
         ),
     group:
         "subj"
@@ -276,7 +381,7 @@ rule template_shape_inject:
         conda_env("greedy")
     threads: 8
     shell:
-        "greedy -d 3 -threads {threads} {params.interp_opt} -rf {input.ref} -rm {input.template_seg} {output.inject_seg}  -r {input.warp} {input.matrix} &> {log}"
+        "greedy -d 3 -threads {threads} {params.interp_opt} -rf {input.ref} -rm {input.template_seg} {output.inject_seg} -r {input.warp} &> {log}"
 
 
 rule reinsert_subject_labels:
@@ -295,7 +400,6 @@ rule reinsert_subject_labels:
             desc="inject",
             space="corobl",
             hemi="{hemi}",
-            label="{label}",
         ),
         subject_seg=get_input_for_shape_inject,
     params:
@@ -315,7 +419,6 @@ rule reinsert_subject_labels:
                 desc="postproc",
                 space="corobl",
                 hemi="{hemi}",
-                label="{label}",
             )
         ),
     group:

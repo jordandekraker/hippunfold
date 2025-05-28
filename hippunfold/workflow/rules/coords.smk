@@ -39,7 +39,6 @@ rule get_label_mask:
             desc="postproc",
             space="corobl",
             hemi="{hemi}",
-            label="{label}",
         )
     params:
         labels=get_gm_labels,
@@ -75,7 +74,6 @@ rule get_src_sink_mask:
             desc="postproc",
             space="corobl",
             hemi="{hemi}",
-            label="{label}",
         )
     params:
         labels=get_src_sink_labels,
@@ -147,7 +145,6 @@ rule get_nan_mask:
             desc="postproc",
             space="corobl",
             hemi="{hemi}",
-            label="{label}",
         )
     params:
         labels=get_nan_labels,
@@ -183,7 +180,6 @@ rule prep_dseg_for_laynii:
             desc="postproc",
             space="corobl",
             hemi="{hemi}",
-            label="{label}",
         )
     params:
         gm_labels=lambda wildcards: " ".join(
@@ -243,7 +239,6 @@ rule smooth_synthlayer:
             desc="postproc",
             space="corobl",
             hemi="{hemi}",
-            label="{label}",
         )
     params:
         gm_labels=lambda wildcards: " ".join(
