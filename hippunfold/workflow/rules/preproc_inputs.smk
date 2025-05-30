@@ -37,8 +37,6 @@ rule lamareg_to_template:
         ),
         template_img=Path(workflow.basedir)
         / "../resources/CITI168-slim/T1w_space-corobl_1mm.nii.gz",
-        template_seg=Path(workflow.basedir)
-        / "../resources/CITI168-slim/synthseg_space-corobl.nii.gz",
     output:
         affine=bids(
             root=root,
@@ -79,9 +77,9 @@ rule lamareg_to_template:
         out=bids(
             root=root,
             datatype="anat",
-            **inputs.wildcards,
-            suffix=config["modality"],
+            suffix=config["modality"] + ".nii.gz",
             space="template",
+            **inputs[config["modality"]].wildcards,
         ),
     shadow:
         "minimal"
@@ -95,7 +93,7 @@ rule lamareg_to_template:
             **inputs.subj_wildcards,
         ),
     shell:
-        "lamar register --fixed {input.template_img} --fixed-parc {input.template_seg} --moving {input.img} --affine {output.affine} --inverse-affine {output.invaffine} --warpfield {output.warp} --inverse-warpfield {output.invwarp} --output {output.out} &> {log}"
+        "lamar register --fixed {input.template_img} --moving {input.img} --affine {output.affine} --inverse-affine {output.invaffine} --warpfield {output.warp} --inverse-warpfield {output.invwarp} --output {output.out} &> {log}"
 
 
 rule apply_transforms:
@@ -107,7 +105,9 @@ rule apply_transforms:
             **inputs[config["modality"]].wildcards,
         ),
         template_img=Path(workflow.basedir)
-        / "../resources/CITI168-slim/T1w_space-corobl_1mm.nii.gz",
+        / "../resources/CITI168-slim/Mask_200umCoronalOblique_hemi-{hemi}.nii.gz".format(
+            hemi="{hemi}"
+        ),
         affine=bids(
             root=root,
             datatype="warps",

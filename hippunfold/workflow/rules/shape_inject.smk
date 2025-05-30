@@ -230,32 +230,28 @@ rule template_shape_reg:
             space="corobl",
             hemi="{hemi}",
         ),
-        affine=temp(
-            bids(
-                root=root,
-                **inputs.subj_wildcards,
-                suffix="xfm.mat",
-                datatype="warps",
-                desc="lamareg",
-                from_="template",
-                to="subject",
-                space="corobl",
-                type_="ras",
-                hemi="{hemi}",
-            )
+        affine=bids(
+            root=root,
+            **inputs.subj_wildcards,
+            suffix="xfm.mat",
+            datatype="warps",
+            desc="lamareg",
+            from_="template",
+            to="subject",
+            space="corobl",
+            type_="ras",
+            hemi="{hemi}",
         ),
-        warp=temp(
-            bids(
-                root=root,
-                **inputs.subj_wildcards,
-                suffix="xfm.nii.gz",
-                datatype="warps",
-                desc="lamareg",
-                from_="template",
-                to="subject",
-                space="corobl",
-                hemi="{hemi}",
-            )
+        warp=bids(
+            root=root,
+            **inputs.subj_wildcards,
+            suffix="xfm.nii.gz",
+            datatype="warps",
+            desc="lamareg",
+            from_="template",
+            to="subject",
+            space="corobl",
+            hemi="{hemi}",
         ),
     params:
         general_opts="-d 3 -m SSD",

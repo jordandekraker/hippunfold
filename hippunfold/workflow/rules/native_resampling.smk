@@ -371,7 +371,7 @@ rule warp_gii_corobl_to_orig:
                 den="{density}",
                 desc="warp",
                 suffix="{surfname}.surf.gii",
-                space="{modality,T1w|T2w}",
+                space="{modality}",
                 hemi="{hemi}",
                 label="{label,hipp|dentate}",
                 **inputs.subj_wildcards,
@@ -387,18 +387,16 @@ rule warp_gii_corobl_to_orig:
 
 rule affine_gii_corobl_to_orig:
     input:
-        gii=temp(
-            bids(
-                root=root,
-                datatype="{surfdir}",
-                den="{density}",
-                desc="warp",
-                suffix="{surfname}.surf.gii",
-                space="{modality,T1w|T2w}",
-                hemi="{hemi}",
-                label="{label,hipp|dentate}",
-                **inputs.subj_wildcards,
-            )
+        gii=bids(
+            root=root,
+            datatype="{surfdir}",
+            den="{density}",
+            desc="warp",
+            suffix="{surfname}.surf.gii",
+            space="{modality}",
+            hemi="{hemi}",
+            label="{label,hipp|dentate}",
+            **inputs.subj_wildcards,
         ),
         xfm=bids(
             root=root,
@@ -415,7 +413,7 @@ rule affine_gii_corobl_to_orig:
             datatype="{surfdir}",
             den="{density}",
             suffix="{surfname}.surf.gii",
-            space="{modality,T1w|T2w}",
+            space="{modality}",
             hemi="{hemi}",
             label="{label,hipp|dentate}",
             **inputs.subj_wildcards,

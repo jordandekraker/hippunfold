@@ -102,22 +102,20 @@ rule run_inference:
 
 rule qc_nnunet_dice:
     input:
-        res_mask=temp(
-            bids(
-                root=root,
-                datatype="anat",
-                **inputs.subj_wildcards,
-                suffix="dseg.nii.gz",
-                desc="nnunet",
-                space="corobl",
-                hemi="{hemi}",
-            )
+        res_mask=bids(
+            root=root,
+            datatype="anat",
+            **inputs.subj_wildcards,
+            suffix="dseg.nii.gz",
+            desc="nnunet",
+            space="corobl",
+            hemi="{hemi}",
         ),
     params:
         hipp_lbls=[1, 2, 3, 4, 5, 6, 7, 8],
         ref=lambda wildcards: (
             Path(workflow.basedir)
-            / "../resources/CITI168-slim/Mask_200umCoronalOblique_hemi-{hemi}.nii.gz.nii.gz".format(
+            / "../resources/CITI168-slim/Mask_200umCoronalOblique_hemi-{hemi}.nii.gz".format(
                 **wildcards
             )
         ),
