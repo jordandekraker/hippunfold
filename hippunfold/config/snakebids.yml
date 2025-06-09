@@ -182,7 +182,7 @@ parse_args:
   --version:
     help: 'Print the version of HippUnfold'
     action: version
-    version: "1.5.2-pre.2"
+    version: "2.0.0"
 
 
 # --- surface specific configuration -- 
@@ -310,7 +310,6 @@ shape_inject:
     - 7
     - 0
   label_smoothing_stdev: '0.5x0.5x0.5mm'
-
 
 
 laplace_labels:

@@ -84,7 +84,7 @@ rule lamareg_to_template:
     shadow:
         "minimal"
     # conda:
-    #     conda_env("lamar")
+    #     "../envs/lamareg.yaml"
     group:
         "subj"
     log:
@@ -93,7 +93,7 @@ rule lamareg_to_template:
             **inputs.subj_wildcards,
         ),
     shell:
-        "lamar register --fixed {input.template_img} --moving {input.img} --affine {output.affine} --inverse-affine {output.invaffine} --warpfield {output.warp} --inverse-warpfield {output.invwarp} --output {output.out} &> {log}"
+        "lamar --synthseg-threads 20 --ants-threads 20 --fixed {input.template_img} --moving {input.img} --affine {output.affine} --inverse-affine {output.invaffine} --warpfield {output.warp} --inverse-warpfield {output.invwarp} --output {output.out} &> {log}"
 
 
 rule apply_transforms:
@@ -156,7 +156,7 @@ rule template_xfm_itk2ras:
     output:
         "{prefix}_type-ras_xfm.mat",
     conda:
-        conda_env("c3d")
+        "../envs/c3d.yaml"
     group:
         "subj"
     shell:
@@ -183,7 +183,7 @@ rule superres_inputs:
             **inputs.subj_wildcards,
         ),
     conda:
-        conda_env("c3d")
+        "../envs/c3d.yaml"
     group:
         "subj"
     shell:

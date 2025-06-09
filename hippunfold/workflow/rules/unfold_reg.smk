@@ -25,7 +25,7 @@ rule create_unfold_ref:
     group:
         "subj"
     conda:
-        conda_env("c3d")
+        "../envs/c3d.yaml"
     shell:
         "c3d -create {params.dims} {params.voxdims}mm -origin {params.origin}mm -orient {params.orient} -o {output.nii}"
 
@@ -231,7 +231,7 @@ rule slice_3d_to_2d_subject:
             )
         ),
     conda:
-        conda_env("neurovis")
+        "../envs/neurovis.yaml"
     group:
         "subj"
     script:
@@ -267,7 +267,7 @@ rule slice_3d_to_2d_atlas:
             )
         ),
     conda:
-        conda_env("neurovis")
+        "../envs/neurovis.yaml"
     group:
         "subj"
     script:
@@ -434,7 +434,7 @@ rule reset_header_2d_warp_unfoldreg:
             )
         ),
     conda:
-        conda_env("neurovis")
+        "../envs/neurovis.yaml"
     script:
         "../scripts/set_metric_nii_header.py"
 

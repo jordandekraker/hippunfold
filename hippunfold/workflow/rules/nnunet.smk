@@ -15,7 +15,7 @@ rule download_nnunet_model:
     output:
         model_tar=get_model_tar(),
     conda:
-        conda_env("curl")
+        "../envs/curl.yaml"
     shell:
         "mkdir -p {params.model_dir} && curl -L https://{params.url} -o {output}"
 
@@ -135,6 +135,6 @@ rule qc_nnunet_dice:
     group:
         "subj"
     conda:
-        conda_env("pyunfold")
+        "../envs/pyunfold.yaml"
     script:
         "../scripts/dice.py"

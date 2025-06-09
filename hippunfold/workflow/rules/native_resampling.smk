@@ -72,7 +72,7 @@ rule resample_native_surf_to_atlas_density:
             )
         ),
     conda:
-        conda_env("workbench")
+        "../envs/workbench.yaml"
     group:
         "subj"
     log:
@@ -130,7 +130,7 @@ rule resample_native_metric_to_atlas_density:
             **inputs.subj_wildcards,
         ),
     conda:
-        conda_env("workbench")
+        "../envs/workbench.yaml"
     group:
         "subj"
     log:
@@ -191,7 +191,7 @@ rule resample_native_coords_to_atlas_density:
             **inputs.subj_wildcards,
         ),
     conda:
-        conda_env("workbench")
+        "../envs/workbench.yaml"
     group:
         "subj"
     log:
@@ -252,7 +252,7 @@ rule resample_atlas_subfields_to_native_surf:
             )
         ),
     conda:
-        conda_env("workbench")
+        "../envs/workbench.yaml"
     group:
         "subj"
     shell:
@@ -281,7 +281,7 @@ rule cp_atlas_subfields_label_gii:
             **inputs.subj_wildcards,
         ),
     conda:
-        conda_env("workbench")
+        "../envs/workbench.yaml"
     group:
         "subj"
     shell:
@@ -334,7 +334,7 @@ rule atlas_label_to_unfold_nii:
             )
         ),
     conda:
-        conda_env("workbench")
+        "../envs/workbench.yaml"
     group:
         "subj"
     shell:
@@ -378,7 +378,7 @@ rule warp_gii_corobl_to_orig:
             )
         ),
     conda:
-        conda_env("workbench")
+        "../envs/workbench.yaml"
     group:
         "subj"
     shell:
@@ -419,7 +419,7 @@ rule affine_gii_corobl_to_orig:
             **inputs.subj_wildcards,
         ),
     conda:
-        conda_env("workbench")
+        "../envs/workbench.yaml"
     group:
         "subj"
     shell:

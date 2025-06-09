@@ -26,7 +26,7 @@ rule qc_reg_to_template:
     group:
         "subj"
     conda:
-        conda_env("neurovis")
+        "../envs/neurovis.yaml"
     script:
         "../scripts/vis_regqc.py"
 
@@ -63,7 +63,7 @@ rule get_subfield_vols_subj:
             **inputs.subj_wildcards,
         ),
     conda:
-        conda_env("pyunfold")
+        "../envs/pyunfold.yaml"
     script:
         "../scripts/gen_volume_tsv.py"
 
@@ -96,7 +96,7 @@ rule plot_subj_subfields:
     group:
         "subj"
     conda:
-        conda_env("neurovis")
+        "../envs/neurovis.yaml"
     script:
         "../scripts/plot_subj_subfields.py"
 
@@ -155,7 +155,7 @@ rule qc_subfield:
     group:
         "subj"
     conda:
-        conda_env("neurovis")
+        "../envs/neurovis.yaml"
     script:
         "../scripts/vis_qc_dseg.py"
 
@@ -191,7 +191,7 @@ rule qc_subfield_surf:
     group:
         "subj"
     conda:
-        conda_env("neurovis")
+        "../envs/neurovis.yaml"
     script:
         "../scripts/vis_qc_surf.py"
 
@@ -227,6 +227,6 @@ rule concat_subj_vols_tsv:
             suffix="volumes.tsv",
         ),
     conda:
-        conda_env("neurovis")
+        "../envs/neurovis.yaml"
     script:
         "../scripts/concat_tsv.py"

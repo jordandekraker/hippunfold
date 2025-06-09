@@ -13,7 +13,7 @@ rule prep_segs_for_greedy:
     group:
         "subj"
     conda:
-        conda_env("c3d")
+        "../envs/c3d.yaml"
     shell:
         "mkdir -p {output} && "
         "c3d {input} -retain-labels {params.labels} -split -foreach -smooth {params.smoothing_stdev} -endfor -oo {output}/label_%02d.nii.gz"
@@ -86,7 +86,7 @@ rule import_template_dseg:
     group:
         "subj"
     conda:
-        conda_env("c3d")
+        "../envs/c3d.yaml"
     shell:
         "{params.copy_or_flip_cmd} {output.template_seg}"
 
@@ -120,7 +120,7 @@ rule resample_template_dseg_tissue_for_reg:
             )
         ),
     conda:
-        conda_env("c3d")
+        "../envs/c3d.yaml"
     group:
         "subj"
     shell:
@@ -194,7 +194,7 @@ rule template_shape_lamareg:
     group:
         "subj"
     # conda:
-    #     conda_env("lamar")
+    #     "../envs/lamareg.yaml"
     log:
         bids_log("template_shape_lamareg", **inputs.subj_wildcards, hemi="{hemi}"),
     shell:
@@ -275,7 +275,7 @@ rule template_shape_reg:
     group:
         "subj"
     conda:
-        conda_env("greedy")
+        "../envs/greedy.yaml"
     threads: 8
     log:
         bids_log("template_shape_reg", **inputs.subj_wildcards, hemi="{hemi}"),
@@ -337,7 +337,7 @@ rule template_shape_inject:
     group:
         "subj"
     conda:
-        conda_env("greedy")
+        "../envs/greedy.yaml"
     threads: 8
     shell:
         "greedy -d 3 -threads {threads} {params.interp_opt} -rf {input.ref} -rm {input.template_seg} {output.inject_seg} -r {input.warp} &> {log}"
@@ -383,7 +383,7 @@ rule reinsert_subject_labels:
     group:
         "subj"
     conda:
-        conda_env("c3d")
+        "../envs/c3d.yaml"
     shell:
         "c3d {input.subject_seg} -retain-labels {params.labels} -popas LBL "
         " -int 0 {input.inject_seg} -as SEG -push LBL -reslice-identity -popas LBL_RESLICE "

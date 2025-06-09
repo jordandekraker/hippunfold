@@ -72,7 +72,7 @@ rule create_dscalar_metric_cifti:
             **inputs.subj_wildcards,
         ),
     conda:
-        conda_env("workbench")
+        "../envs/workbench.yaml"
     group:
         "subj"
     shell:
@@ -135,7 +135,7 @@ rule create_dlabel_cifti_subfields:
             **inputs.subj_wildcards,
         ),
     conda:
-        conda_env("workbench")
+        "../envs/workbench.yaml"
     group:
         "subj"
     shell:
@@ -174,7 +174,7 @@ rule create_spec_file:
             )
         ),
     conda:
-        conda_env("workbench")
+        "../envs/workbench.yaml"
     group:
         "subj"
     shell:
@@ -217,7 +217,7 @@ rule merge_lr_spec_file:
             )
         ),
     conda:
-        conda_env("workbench")
+        "../envs/workbench.yaml"
     group:
         "subj"
     shell:
@@ -249,74 +249,8 @@ rule merge_hipp_dentate_spec_file:
             **inputs.subj_wildcards,
         ),
     conda:
-        conda_env("workbench")
+        "../envs/workbench.yaml"
     group:
         "subj"
     shell:
         "{params.cmd}"
-
-
-def get_inputs_to_remove(wildcards):
-    files = []
-    for label in config["autotop_labels"]:
-        for spec_input in get_inputs_spec_file(label, density=config["unused_density"]):
-            files.extend(
-                expand(
-                    spec_input,
-                    label=label,
-                    hemi=config["hemi"],
-                    **wildcards,
-                )
-            )
-    files.extend(
-        expand(
-            bids(
-                root=root,
-                datatype="surf",
-                den="{density}",
-                suffix="{surfname}.surf.gii",
-                space="{space}",
-                hemi="{hemi}",
-                label="{label}",
-                **inputs.subj_wildcards,
-            ),
-            surfname=["midthickness", "inner", "outer"],
-            space=["corobl", "unfold"],
-            label=config["autotop_labels"],
-            density=config["unused_density"],
-            hemi=config["hemi"],
-            **wildcards,
-            allow_missing=True,
-        )
-    )
-    return files
-
-
-rule remove_extra_spec_inputs:
-    """ after all specs are created, remove files with unused density """
-    input:
-        expand(
-            bids(
-                root=root,
-                datatype="{surfdir}",
-                den="{density}",
-                suffix="surfaces.spec",
-                **inputs.subj_wildcards,
-            ),
-            density=config["output_density"],
-            space=ref_spaces,
-            allow_missing=True,
-        ),
-    params:
-        to_remove=get_inputs_to_remove,
-    output:
-        temp(
-            bids(
-                root=root,
-                datatype="{surfdir}",
-                suffix="removeunused.touch",
-                **inputs.subj_wildcards,
-            )
-        ),
-    shell:
-        "rm -f {params.to_remove} && touch {output}"

@@ -57,7 +57,7 @@ rule get_label_mask:
     group:
         "subj"
     conda:
-        conda_env("c3d")
+        "../envs/c3d.yaml"
     shell:
         "c3d {input} -background -1 -retain-labels {params} -binarize {output}"
 
@@ -90,7 +90,7 @@ rule get_src_sink_mask:
             )
         ),
     conda:
-        conda_env("c3d")
+        "../envs/c3d.yaml"
     group:
         "subj"
     shell:
@@ -126,7 +126,7 @@ rule get_src_sink_sdt:
             )
         ),
     conda:
-        conda_env("c3d")
+        "../envs/c3d.yaml"
     group:
         "subj"
     shell:
@@ -161,67 +161,11 @@ rule get_nan_mask:
             )
         ),
     conda:
-        conda_env("c3d")
+        "../envs/c3d.yaml"
     group:
         "subj"
     shell:
         "c3d {input} -background -1 -retain-labels {params} -binarize {output}"
-
-
-rule prep_dseg_for_laynii:
-    input:
-        seg=bids(
-            root=root,
-            datatype="anat",
-            **inputs.subj_wildcards,
-            suffix="dseg.nii.gz",
-            desc="postproc",
-            space="corobl",
-            hemi="{hemi}",
-        ),
-    params:
-        gm_labels=lambda wildcards: " ".join(
-            [str(lbl) for lbl in config["laplace_labels"][wildcards.label]["gm"]]
-        ),
-        src_labels=lambda wildcards: " ".join(
-            [
-                str(lbl)
-                for lbl in config["laplace_labels"][wildcards.label][wildcards.dir][
-                    "src"
-                ]
-            ]
-        ),
-        sink_labels=lambda wildcards: " ".join(
-            [
-                str(lbl)
-                for lbl in config["laplace_labels"][wildcards.label][wildcards.dir][
-                    "sink"
-                ]
-            ]
-        ),
-    output:
-        dseg_rim=temp(
-            bids(
-                root=root,
-                datatype="anat",
-                **inputs.subj_wildcards,
-                suffix="dseg.nii.gz",
-                dir="{dir,IO}",
-                desc="laynii",
-                label="{label}",
-                space="corobl",
-                hemi="{hemi}",
-            )
-        ),
-    conda:
-        conda_env("c3d")
-    group:
-        "subj"
-    shell:
-        "c3d -background -1 {input} -as DSEG -retain-labels {params.gm_labels} -binarize -scale 3 -popas GM -push DSEG -retain-labels {params.src_labels} -binarize -scale 2 -popas WM -push DSEG -retain-labels {params.sink_labels} -binarize -scale 1 -popas PIAL -push GM -push WM -add -push PIAL -add -o {output}"
-
-
-ruleorder: smooth_synthlayer > laynii_layers
 
 
 rule smooth_synthlayer:
@@ -271,7 +215,7 @@ rule smooth_synthlayer:
             )
         ),
     conda:
-        conda_env("pyunfold")
+        "../envs/pyunfold.yaml"
     log:
         bids_log(
             "smooth_synthlayer",
@@ -284,52 +228,3 @@ rule smooth_synthlayer:
         "subj"
     script:
         "../scripts/smooth_synthlayer.py"
-
-
-rule laynii_layers:
-    input:
-        dseg_rim=bids(
-            root=root,
-            datatype="anat",
-            **inputs.subj_wildcards,
-            suffix="dseg.nii.gz",
-            dir="{dir}",
-            desc="laynii",
-            label="{label}",
-            space="corobl",
-            hemi="{hemi}",
-        ),
-    output:
-        equidist=temp(
-            bids(
-                root=root,
-                datatype="coords",
-                dir="{dir,IO}",
-                label="{label}",
-                suffix="coords.nii.gz",
-                desc="equidist",
-                space="corobl",
-                hemi="{hemi}",
-                **inputs.subj_wildcards,
-            )
-        ),
-    shadow:
-        "minimal"
-    conda:
-        conda_env("laynii")
-    log:
-        bids_log(
-            "laynii_layers",
-            **inputs.subj_wildcards,
-            dir="{dir, IO}",
-            label="{label}",
-            hemi="{hemi}",
-        ),
-    group:
-        "subj"
-    shell:
-        "cp {input} dseg.nii.gz && "
-        "LN2_LAYERS  -rim dseg.nii.gz &> {log} && "
-
-        "cp dseg_metric_equidist.nii.gz {output.equidist}"
-        # "LN2_LAYERS  -rim dseg.nii.gz -equivol &> {log} && "
