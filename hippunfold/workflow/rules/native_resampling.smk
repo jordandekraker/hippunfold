@@ -359,8 +359,8 @@ rule warp_gii_corobl_to_orig:
             datatype="warps",
             **inputs.subj_wildcards,
             suffix="xfm.nii.gz",
-            from_="{modality}",
-            to="corobl",
+            from_="corobl",
+            to="{modality}",
             type_="itk",
         ),
     output:
