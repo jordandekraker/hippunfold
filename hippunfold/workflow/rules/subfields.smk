@@ -138,7 +138,15 @@ rule native_label_gii_to_unfold_nii:
 
 rule label_subfields_from_vol_coords_corobl:
     input:
-        ref_nii=get_input_for_shape_inject,
+        ref_nii=bids(
+            root=root,
+            datatype="anat",
+            **inputs.subj_wildcards,
+            suffix="dseg.nii.gz",
+            desc="postproc",
+            space="corobl",
+            hemi="{hemi}",
+        ),
         midthickness_surf=bids(
             root=root,
             datatype="surf",
@@ -233,7 +241,15 @@ rule combine_tissue_subfield_labels_corobl:
     then, we just need to add those in, using max(old,new) to override old with new in case of conflict
     """
     input:
-        tissue=get_input_for_shape_inject,
+        tissue=bids(
+                root=root,
+                datatype="anat",
+                **inputs.subj_wildcards,
+                suffix="dseg.nii.gz",
+                desc="postproc",
+                space="corobl",
+                hemi="{hemi}",
+            ),
         subfields=bids(
             root=root,
             datatype="anat",
@@ -325,7 +341,7 @@ rule resample_subfields_to_orig:
         "subj"
     shell:
         "ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS={threads} "
-        "antsApplyTransforms -d 3 --interpolation MultiLabel -i {input.nii} -o {output.nii} -r {input.ref} -t {input.warp} [{input.xfm},1]"
+        "antsApplyTransforms -d 3 --interpolation MultiLabel -i {input.nii} -o {output.nii} -r {input.ref} -t [{input.xfm},1] {input.warp}"
 
 
 rule resample_subfields_to_unfold:
