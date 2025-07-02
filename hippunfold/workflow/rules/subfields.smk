@@ -242,14 +242,14 @@ rule combine_tissue_subfield_labels_corobl:
     """
     input:
         tissue=bids(
-                root=root,
-                datatype="anat",
-                **inputs.subj_wildcards,
-                suffix="dseg.nii.gz",
-                desc="postproc",
-                space="corobl",
-                hemi="{hemi}",
-            ),
+            root=root,
+            datatype="anat",
+            **inputs.subj_wildcards,
+            suffix="dseg.nii.gz",
+            desc="postproc",
+            space="corobl",
+            hemi="{hemi}",
+        ),
         subfields=bids(
             root=root,
             datatype="anat",
