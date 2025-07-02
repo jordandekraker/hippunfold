@@ -1,43 +1,8 @@
-def get_model_tar():
-    model_name = config["nnunet_model"]
-
-    local_tar = config["resource_urls"]["nnunet_model"].get(model_name, None)
-    if local_tar == None:
-        print(f"ERROR: {model_name} does not exist in nnunet_model in the config file")
-
-    return (Path(download_dir) / "model" / Path(local_tar).name).absolute()
-
-
-rule download_nnunet_model:
-    params:
-        url=(config["resource_urls"]["nnunet_model"][config["nnunet_model"]]),
-        model_dir=Path(download_dir) / "model",
-    output:
-        model_tar=get_model_tar(),
-    conda:
-        "../envs/curl.yaml"
-    shell:
-        "mkdir -p {params.model_dir} && curl -L https://{params.url} -o {output}"
-
-
-def get_cmd_copy_inputs(wildcards, input):
-    in_img = input.in_img
-    if isinstance(in_img, str):
-        # we have one input image
-        return f"cp {in_img} tempimg/temp_0000.nii.gz"
-    else:
-        cmd = []
-        # we have multiple input images
-        for i, img in enumerate(input.in_img):
-            cmd.append(f"cp {img} tempimg/temp_{i:04d}.nii.gz")
-        return " && ".join(cmd)
-
-
 rule run_inference:
     """ This rule uses either GPU or CPU .
     It also runs in an isolated folder (shadow), with symlinks to inputs in that folder, copying over outputs once complete, so temp files are not retained"""
     input:
-        in_img=bids(
+        nii=bids(
             root=root,
             datatype="anat",
             space="corobl",
@@ -45,16 +10,11 @@ rule run_inference:
             suffix="preproc.nii.gz",
             **inputs.subj_wildcards,
         ),
-        model_tar=get_model_tar(),
     params:
-        cmd_copy_inputs=get_cmd_copy_inputs,
-        temp_lbl="templbl/temp.nii.gz",
-        model_dir="tempmodel",
-        in_folder="tempimg",
-        out_folder="templbl",
-        tta="" if config["nnunet_enable_tta"] else "--disable_tta",
+        model_weights=workflow.basedir + "/../resources/models/model_epoch100.pth",
+        device="cuda" if config["use_gpu"] else "cpu",
     output:
-        nnunet_seg=temp(
+        nii=temp(
             bids(
                 root=root,
                 datatype="anat",
@@ -71,8 +31,6 @@ rule run_inference:
             **inputs.subj_wildcards,
             hemi="{hemi}",
         ),
-    shadow:
-        "minimal"
     threads: 16
     resources:
         gpus=1 if config["use_gpu"] else 0,
@@ -80,24 +38,10 @@ rule run_inference:
         time=30 if config["use_gpu"] else 60,
     group:
         "subj"
-    # conda:
-    #     conda_env("nnunetv2")
-    shell:
-        #create temp folders
-        #cp input image to temp folder
-        #extract model
-        #set nnunet env var to point to model
-        #set threads
-        # run inference
-        #copy from temp output folder to final output
-        "mkdir -p {params.model_dir} {params.in_folder} {params.out_folder} && "
-        "{params.cmd_copy_inputs} && "
-        "tar -xf {input.model_tar} -C {params.model_dir} && "
-        "mv tempmodel/trained_models/Dataset001_multihist7 tempmodel/ && "
-        "export nnUNet_results={params.model_dir} && "
-        "export nnUNet_n_proc_DA={threads} && "
-        "nnUNetv2_predict -i {params.in_folder} -o {params.out_folder} -d 001 -c 3d_fullres {params.tta} &> {log} && "
-        "cp {params.temp_lbl} {output.nnunet_seg}"
+    conda:
+        "../envs/torch.yaml"
+    script:
+        "../scripts/torch_inference.py"
 
 
 rule qc_nnunet_dice:

@@ -378,7 +378,7 @@ rule warp_gii_corobl_to_orig:
             )
         ),
     conda:
-        conda_env("workbench")
+        "../envs/workbench.yaml"
     group:
         "subj"
     shell:

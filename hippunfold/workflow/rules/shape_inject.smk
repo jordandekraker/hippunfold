@@ -193,8 +193,8 @@ rule template_shape_lamareg:
         ),
     group:
         "subj"
-    # conda:
-    #     "../envs/lamareg.yaml"
+    conda:
+        "../envs/lamareg.yaml"
     log:
         bids_log("template_shape_lamareg", **inputs.subj_wildcards, hemi="{hemi}"),
     shell:

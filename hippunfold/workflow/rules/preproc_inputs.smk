@@ -83,8 +83,13 @@ rule lamareg_to_template:
         ),
     shadow:
         "minimal"
-    # conda:
-    #     "../envs/lamareg.yaml"
+    conda:
+        "../envs/lamareg.yaml"
+    threads: 16
+    resources:
+        gpus=1 if config["use_gpu"] else 0,
+        mem_mb=16000,
+        time=30 if config["use_gpu"] else 60,
     group:
         "subj"
     log:
@@ -93,7 +98,7 @@ rule lamareg_to_template:
             **inputs.subj_wildcards,
         ),
     shell:
-        "lamar --synthseg-threads 20 --ants-threads 20 --fixed {input.template_img} --moving {input.img} --affine {output.affine} --inverse-affine {output.invaffine} --warpfield {output.warp} --inverse-warpfield {output.invwarp} --output {output.out} &> {log}"
+        "lamar --synthseg-threads {threads} --ants-threads {threads} --fixed {input.template_img} --moving {input.img} --affine {output.affine} --inverse-affine {output.invaffine} --warpfield {output.warp} --inverse-warpfield {output.invwarp} --output {output.out} &> {log}"
 
 
 rule apply_transforms:
@@ -135,6 +140,8 @@ rule apply_transforms:
             suffix=config["modality"] + ".nii.gz",
             **inputs[config["modality"]].wildcards,
         ),
+    conda:
+        "../envs/lamareg.yaml"
     group:
         "subj"
     log:
