@@ -31,50 +31,6 @@ rule calculate_surface_area:
         "wb_command -surface-vertex-areas {input} {output}"
 
 
-rule metric_smoothing:
-    input:
-        surface=bids(
-            root=root,
-            datatype="surf",
-            suffix="midthickness.surf.gii",
-            space="corobl",
-            den="{density}",
-            hemi="{hemi}",
-            label="{label}",
-            **inputs.subj_wildcards,
-        ),
-        metric=bids(
-            root=root,
-            datatype="metric",
-            suffix="{metric}.shape.gii",
-            den="{density}",
-            hemi="{hemi}",
-            label="{label}",
-            **inputs.subj_wildcards,
-        ),
-    params:
-        fwhm=lambda wildcards: str(wildcards.fwhm).replace("p", "."),
-    output:
-        metric=temp(
-            bids(
-                root=root,
-                datatype="metric",
-                suffix="{metric}.shape.gii",
-                den="{density}",
-                desc="fwhm{fwhm}mm",
-                hemi="{hemi}",
-                label="{label}",
-                **inputs.subj_wildcards,
-            )
-        ),
-    conda:
-        "../envs/workbench.yaml"
-    group:
-        "subj"
-    shell:
-        "wb_command -metric-smoothing {input.surface} {input.metric} {params.fwhm} {output.metric} -fwhm"
-
-
 rule calculate_gyrification:
     input:
         native_surfarea=bids(
@@ -82,7 +38,6 @@ rule calculate_gyrification:
             datatype="metric",
             suffix="surfareacorobl.shape.gii",
             den="native",
-            desc="fwhm1mm",
             hemi="{hemi}",
             label="{label}",
             **inputs.subj_wildcards,
@@ -90,9 +45,8 @@ rule calculate_gyrification:
         unfold_surfarea=bids(
             root=root,
             datatype="metric",
-            suffix="surfareaunfoldspringmodelsmooth.shape.gii",
+            suffix="surfareaunfold.shape.gii",
             den="native",
-            desc="fwhm1mm",
             hemi="{hemi}",
             label="{label}",
             **inputs.subj_wildcards,
@@ -127,7 +81,6 @@ rule calculate_curvature:
             suffix="midthickness.surf.gii",
             space="corobl",
             den="native",
-            desc="smoothed",
             hemi="{hemi}",
             label="{label}",
             **inputs.subj_wildcards,

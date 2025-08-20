@@ -1,134 +1,20 @@
-import re
-
-
-def get_nnunet_input(wildcards):
-    T1w_nii = bids(
-        root=root,
-        datatype="anat",
-        space="corobl",
-        desc="preproc",
-        hemi="{hemi}",
-        suffix="T1w.nii.gz",
-        **inputs.subj_wildcards,
-    )
-    T2w_nii = bids(
-        root=root,
-        datatype="anat",
-        space="corobl",
-        desc="preproc",
-        hemi="{hemi}",
-        suffix="T2w.nii.gz",
-        **inputs.subj_wildcards,
-    )
-    if (config["modality"] == "T1w" or config["modality"] == "T2w") and config[
-        "force_nnunet_model"
-    ] == "T1T2w":
-        return (T1w_nii, T2w_nii)
-
-    elif config["modality"] == "T2w":
-        return T2w_nii
-    elif config["modality"] == "T1w":
-        return T1w_nii
-    elif config["modality"] == "hippb500":
-        return bids(
-            root=root,
-            datatype="dwi",
-            hemi="{hemi}",
-            space="corobl",
-            suffix="b500.nii.gz",
-            **inputs.subj_wildcards,
-        )
-    else:
-        raise ValueError("modality not supported for nnunet!")
-
-
-def get_model_tar():
-    if config["force_nnunet_model"]:
-        model_name = config["force_nnunet_model"]
-    else:
-        model_name = config["modality"]
-
-    local_tar = config["resource_urls"]["nnunet_model"].get(model_name, None)
-    if local_tar == None:
-        print(f"ERROR: {model_name} does not exist in nnunet_model in the config file")
-
-    return (Path(download_dir) / "model" / Path(local_tar).name).absolute()
-
-
-rule download_nnunet_model:
-    params:
-        url=(
-            config["resource_urls"]["nnunet_model"][config["force_nnunet_model"]]
-            if config["force_nnunet_model"]
-            else config["resource_urls"]["nnunet_model"][config["modality"]]
-        ),
-        model_dir=Path(download_dir) / "model",
-    output:
-        model_tar=get_model_tar(),
-    conda:
-        "../envs/curl.yaml"
-    shell:
-        "mkdir -p {params.model_dir} && curl -L https://{params.url} -o {output}"
-
-
-def parse_task_from_tar(wildcards, input):
-    match = re.search(r"Task[0-9]{3}_[\w]+", input.model_tar)
-    if match:
-        task = match.group(0)
-    else:
-        raise ValueError("cannot parse Task from model tar")
-    return task
-
-
-def parse_chkpnt_from_tar(wildcards, input):
-    match = re.search(r"^.*\.(\w+)\.tar", input.model_tar)
-    if match:
-        chkpnt = match.group(1)
-    else:
-        raise ValueError("cannot parse chkpnt from model tar")
-    return chkpnt
-
-
-def parse_trainer_from_tar(wildcards, input):
-    match = re.search(r"^.*\.(\w+)\..*.tar", input.model_tar)
-    if match:
-        trainer = match.group(1)
-    else:
-        raise ValueError("cannot parse chkpnt from model tar")
-    return trainer
-
-
-def get_cmd_copy_inputs(wildcards, input):
-    in_img = input.in_img
-    if isinstance(in_img, str):
-        # we have one input image
-        return f"cp {in_img} tempimg/temp_0000.nii.gz"
-    else:
-        cmd = []
-        # we have multiple input images
-        for i, img in enumerate(input.in_img):
-            cmd.append(f"cp {img} tempimg/temp_{i:04d}.nii.gz")
-        return " && ".join(cmd)
-
-
 rule run_inference:
     """ This rule uses either GPU or CPU .
     It also runs in an isolated folder (shadow), with symlinks to inputs in that folder, copying over outputs once complete, so temp files are not retained"""
     input:
-        in_img=get_nnunet_input,
-        model_tar=get_model_tar(),
+        nii=bids(
+            root=root,
+            datatype="anat",
+            space="corobl",
+            hemi="{hemi,L|R}",
+            suffix="preproc.nii.gz",
+            **inputs.subj_wildcards,
+        ),
     params:
-        cmd_copy_inputs=get_cmd_copy_inputs,
-        temp_lbl="templbl/temp.nii.gz",
-        model_dir="tempmodel",
-        in_folder="tempimg",
-        out_folder="templbl",
-        task=parse_task_from_tar,
-        chkpnt=parse_chkpnt_from_tar,
-        trainer=parse_trainer_from_tar,
-        tta="" if config["nnunet_enable_tta"] else "--disable_tta",
+        model_weights=workflow.basedir + "/../resources/models/model_epoch2k.ckpt",
+        device="cuda" if config["use_gpu"] else "cpu",
     output:
-        nnunet_seg=temp(
+        nii=temp(
             bids(
                 root=root,
                 datatype="anat",
@@ -145,8 +31,6 @@ rule run_inference:
             **inputs.subj_wildcards,
             hemi="{hemi}",
         ),
-    shadow:
-        "minimal"
     threads: 16
     resources:
         gpus=1 if config["use_gpu"] else 0,
@@ -155,110 +39,9 @@ rule run_inference:
     group:
         "subj"
     conda:
-        "../envs/nnunet.yaml"
-    shell:
-        #create temp folders
-        #cp input image to temp folder
-        #extract model
-        #set nnunet env var to point to model
-        #set threads
-        # run inference
-        #copy from temp output folder to final output
-        "mkdir -p {params.model_dir} {params.in_folder} {params.out_folder} && "
-        "{params.cmd_copy_inputs} && "
-        "tar -xf {input.model_tar} -C {params.model_dir} && "
-        "export RESULTS_FOLDER={params.model_dir} && "
-        "export nnUNet_n_proc_DA={threads} && "
-        "nnUNet_predict -i {params.in_folder} -o {params.out_folder} -t {params.task} -chk {params.chkpnt} -tr {params.trainer} {params.tta} &> {log} && "
-        "cp {params.temp_lbl} {output.nnunet_seg}"
-
-
-def get_f3d_ref(wildcards, input):
-    if config["modality"] == "T2w":
-        nii = Path(input.template_dir) / config["template_files"][config["template"]][
-            "crop_ref"
-        ].format(**wildcards)
-    elif config["modality"] == "T1w":
-        nii = Path(input.template_dir) / config["template_files"][config["template"]][
-            "crop_refT1w"
-        ].format(**wildcards)
-    else:
-        raise ValueError("modality not supported for nnunet!")
-    return nii
-
-
-rule qc_nnunet_f3d:
-    input:
-        img=(
-            bids(
-                root=root,
-                datatype="anat",
-                **inputs.subj_wildcards,
-                suffix="{modality}.nii.gz".format(modality=config["modality"]),
-                space="corobl",
-                desc="preproc",
-                hemi="{hemi}",
-            ),
-        ),
-        seg=bids(
-            root=root,
-            datatype="anat",
-            **inputs.subj_wildcards,
-            suffix="dseg.nii.gz",
-            desc="nnunet",
-            space="corobl",
-            hemi="{hemi}",
-        ),
-        template_dir=Path(download_dir) / "template" / config["template"],
-    params:
-        ref=get_f3d_ref,
-    output:
-        cpp=temp(
-            bids(
-                root=root,
-                datatype="warps",
-                **inputs.subj_wildcards,
-                suffix="cpp.nii.gz",
-                desc="f3d",
-                space="corobl",
-                hemi="{hemi}",
-            )
-        ),
-        res=temp(
-            bids(
-                root=root,
-                datatype="anat",
-                **inputs.subj_wildcards,
-                suffix="{modality}.nii.gz".format(modality=config["modality"]),
-                desc="f3d",
-                space="template",
-                hemi="{hemi}",
-            )
-        ),
-        res_mask=temp(
-            bids(
-                root=root,
-                datatype="anat",
-                **inputs.subj_wildcards,
-                suffix="mask.nii.gz",
-                desc="f3d",
-                space="template",
-                hemi="{hemi}",
-            )
-        ),
-    conda:
-        "../envs/niftyreg.yaml"
-    log:
-        bids_log(
-            "qc_nnunet_f3d",
-            **inputs.subj_wildcards,
-            hemi="{hemi}",
-        ),
-    group:
-        "subj"
-    shell:
-        "reg_f3d -flo {input.img} -ref {params.ref} -res {output.res} -cpp {output.cpp} &> {log} && "
-        "reg_resample -flo {input.seg} -cpp {output.cpp} -ref {params.ref} -res {output.res_mask} -inter 0 &> {log}"
+        "../envs/torch.yaml"
+    script:
+        "../scripts/torch_inference.py"
 
 
 rule qc_nnunet_dice:
@@ -267,17 +50,16 @@ rule qc_nnunet_dice:
             root=root,
             datatype="anat",
             **inputs.subj_wildcards,
-            suffix="mask.nii.gz",
-            desc="f3d",
-            space="template",
+            suffix="dseg.nii.gz",
+            desc="nnunet",
+            space="corobl",
             hemi="{hemi}",
         ),
-        template_dir=Path(download_dir) / "template" / config["template"],
     params:
-        hipp_lbls=[1, 2, 7, 8],
-        ref=lambda wildcards, input: (
-            Path(input.template_dir)
-            / config["template_files"][config["template"]]["Mask_crop"].format(
+        hipp_lbls=[1, 2, 3, 4, 5, 6, 7, 8],
+        ref=lambda wildcards: (
+            Path(workflow.basedir)
+            / "../resources/CITI168-slim/Mask_200umCoronalOblique_hemi-{hemi}.nii.gz".format(
                 **wildcards
             )
         ),

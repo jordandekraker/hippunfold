@@ -142,7 +142,15 @@ rule map_surf_subfields_to_volume:
     jittered wrt original volumetric segmentations because of smoothing and interpolation
     so are ultimately used with nearest voxel mapping in the label_gm_with_nearest_subfields rule"""
     input:
-        ref_nii=get_labels_for_laplace,
+        ref_nii=bids(
+            root=root,
+            datatype="anat",
+            **inputs.subj_wildcards,
+            suffix="dseg.nii.gz",
+            desc="postproc",
+            space="corobl",
+            hemi="{hemi}",
+        ),
         midthickness_surf=bids(
             root=root,
             datatype="surf",
@@ -345,7 +353,15 @@ rule combine_tissue_subfield_labels_corobl:
     then, we just need to add those in, using max(old,new) to override old with new in case of conflict
     """
     input:
-        tissue=get_labels_for_laplace,
+        tissue=bids(
+            root=root,
+            datatype="anat",
+            **inputs.subj_wildcards,
+            suffix="dseg.nii.gz",
+            desc="postproc",
+            space="corobl",
+            hemi="{hemi}",
+        ),
         subfields=bids(
             root=root,
             datatype="anat",
@@ -399,17 +415,24 @@ rule resample_subfields_to_orig:
             root=root,
             datatype="warps",
             **inputs.subj_wildcards,
-            suffix="xfm.txt",
-            from_="{modality}",
-            to="corobl",
-            desc="affine",
+            suffix="xfm.mat",
+            from_="corobl",
+            to="{modality}",
+            type_="itk",
+        ),
+        warp=bids(
+            root=root,
+            datatype="warps",
+            **inputs.subj_wildcards,
+            suffix="xfm.nii.gz",
+            from_="corobl",
+            to="{modality}",
             type_="itk",
         ),
         ref=bids(
             root=root,
             datatype="anat",
             **inputs.subj_wildcards,
-            desc="preproc",
             suffix="{modality}.nii.gz",
         ),
     output:
@@ -430,108 +453,7 @@ rule resample_subfields_to_orig:
         "subj"
     shell:
         "ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS={threads} "
-        "antsApplyTransforms -d 3 --interpolation MultiLabel -i {input.nii} -o {output.nii} -r {input.ref}  -t [{input.xfm},1]"
-
-
-rule resample_postproc_to_orig:
-    """Resample post-processed tissue seg to original modality"""
-    input:
-        nii=bids(
-            root=root,
-            datatype="anat",
-            **inputs.subj_wildcards,
-            suffix="dseg.nii.gz",
-            desc="postproc",
-            space="corobl",
-            hemi="{hemi}",
-            label=config["autotop_labels"][-1],
-        ),
-        xfm=bids(
-            root=root,
-            datatype="warps",
-            **inputs.subj_wildcards,
-            suffix="xfm.txt",
-            from_="{modality}",
-            to="corobl",
-            desc="affine",
-            type_="itk",
-        ),
-        ref=bids(
-            root=root,
-            datatype="anat",
-            **inputs.subj_wildcards,
-            desc="preproc",
-            suffix="{modality}.nii.gz",
-        ),
-    output:
-        nii=temp(
-            bids(
-                root=root,
-                datatype="anat",
-                suffix="dseg.nii.gz",
-                desc="postproc",
-                space="{modality,T2w|T2w}",
-                hemi="{hemi}",
-                **inputs.subj_wildcards,
-            )
-        ),
-    conda:
-        "../envs/ants.yaml"
-    group:
-        "subj"
-    shell:
-        "ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS={threads} "
-        "antsApplyTransforms -d 3 --interpolation MultiLabel -i {input.nii} -o {output.nii} -r {input.ref}  -t [{input.xfm},1]"
-
-
-rule resample_unet_to_orig:
-    """Resample unet tissue seg to original modality"""
-    input:
-        nii=bids(
-            root=root,
-            datatype="anat",
-            **inputs.subj_wildcards,
-            suffix="dseg.nii.gz",
-            desc="nnunet",
-            space="corobl",
-            hemi="{hemi}",
-        ),
-        xfm=bids(
-            root=root,
-            datatype="warps",
-            **inputs.subj_wildcards,
-            suffix="xfm.txt",
-            from_="{modality}",
-            to="corobl",
-            desc="affine",
-            type_="itk",
-        ),
-        ref=bids(
-            root=root,
-            datatype="anat",
-            **inputs.subj_wildcards,
-            desc="preproc",
-            suffix="{modality}.nii.gz",
-        ),
-    output:
-        nii=temp(
-            bids(
-                root=root,
-                datatype="anat",
-                suffix="dseg.nii.gz",
-                desc="unet",
-                space="{modality,T1w|T2w}",
-                hemi="{hemi}",
-                **inputs.subj_wildcards,
-            )
-        ),
-    conda:
-        "../envs/ants.yaml"
-    group:
-        "subj"
-    shell:
-        "ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS={threads} "
-        "antsApplyTransforms -d 3 --interpolation MultiLabel -i {input.nii} -o {output.nii} -r {input.ref}  -t [{input.xfm},1]"
+        "antsApplyTransforms -d 3 --interpolation MultiLabel -i {input.nii} -o {output.nii} -r {input.ref} -t [{input.xfm},1] {input.warp}"
 
 
 rule resample_subfields_to_unfold:

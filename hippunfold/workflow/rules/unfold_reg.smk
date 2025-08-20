@@ -1,3 +1,34 @@
+# unfold ref nifti
+rule create_unfold_ref:
+    params:
+        dims=lambda wildcards: "x".join(
+            config["unfold_vol_ref"][wildcards.label]["dims"]
+        ),
+        voxdims=lambda wildcards: "x".join(
+            config["unfold_vol_ref"][wildcards.label]["voxdims"]
+        ),
+        origin=lambda wildcards: "x".join(
+            config["unfold_vol_ref"][wildcards.label]["origin"]
+        ),
+        orient=lambda wildcards: config["unfold_vol_ref"][wildcards.label]["orient"],
+    output:
+        nii=temp(
+            bids(
+                root=root,
+                space="unfold",
+                label="{label}",
+                datatype="warps",
+                suffix="refvol.nii.gz",
+                **inputs.subj_wildcards,
+            )
+        ),
+    group:
+        "subj"
+    conda:
+        "../envs/c3d.yaml"
+    shell:
+        "c3d -create {params.dims} {params.voxdims}mm -origin {params.origin}mm -orient {params.orient} -o {output.nii}"
+
 
 rule extract_unfold_ref_slice:
     """This gets the central-most slice of the unfold volume, for obtaining a 2D slice"""

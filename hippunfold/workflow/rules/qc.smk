@@ -5,17 +5,11 @@ rule qc_reg_to_template:
             datatype="anat",
             **inputs.subj_wildcards,
             suffix="{modality}.nii.gz",
-            space=config["template"],
-            desc="affine",
+            space="template",
         ),
-        template_dir=Path(download_dir) / "template" / config["template"],
     params:
-        ref=lambda wildcards, input: str(
-            Path(input.template_dir)
-            / config["template_files"][config["template"]][wildcards.modality].format(
-                **wildcards
-            )
-        ),
+        ref=Path(workflow.basedir)
+        / "../resources/CITI168-slim/T1w_space-corobl_1mm.nii.gz",
     output:
         png=report(
             bids(
@@ -24,7 +18,7 @@ rule qc_reg_to_template:
                 **inputs.subj_wildcards,
                 suffix="regqc.png",
                 from_="{modality}",
-                to=config["template"],
+                to="template",
             ),
             caption="../report/t1w_template_regqc.rst",
             category="Registration QC",
@@ -110,17 +104,7 @@ rule plot_subj_subfields:
 
 
 def get_bg_img_for_subfield_qc(wildcards):
-    if config["modality"] == "hippb500":
-        return bids(
-            root=root,
-            datatype="anat",
-            desc="preproc",
-            suffix="hippb500.nii.gz",
-            space="{space}",
-            hemi="{hemi}",
-            **inputs.subj_wildcards,
-        )
-    elif config["modality"] == "dsegtissue":
+    if config["modality"] == "dsegtissue":
         # blank image as bg
         return bids(
             root=root,
@@ -130,26 +114,11 @@ def get_bg_img_for_subfield_qc(wildcards):
             hemi="{hemi}",
             **inputs.subj_wildcards,
         )
-
-    elif config["modality"][:3] == "seg":
-        bg_modality = config["modality"][3:]
-        return bids(
-            root=root,
-            datatype="anat",
-            desc="preproc",
-            suffix=f"{bg_modality}.nii.gz",
-            space="{space}",
-            hemi="{hemi}",
-            **inputs.subj_wildcards,
-        )
-
     else:
-        bg_modality = config["modality"]
         return bids(
             root=root,
             datatype="anat",
-            desc="preproc",
-            suffix=f"{bg_modality}.nii.gz",
+            suffix=config["modality"] + ".nii.gz",
             space="{space}",
             hemi="{hemi}",
             **inputs.subj_wildcards,

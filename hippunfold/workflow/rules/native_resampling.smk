@@ -1,28 +1,3 @@
-def get_unfold_ref_name(wildcards):
-    if (
-        wildcards.label in config["atlas_metadata"][config["atlas"]]["label_wildcards"]
-        and config["no_unfolded_reg"] == False
-    ):
-        return "unfoldreg"
-    else:
-        return "unfold"
-
-
-def get_unfold_ref(wildcards):
-    """function to return either unfoldreg or unfold ref mesh, depending on whether
-    unfoldreg can be performed (based on atlas wildcards)"""
-
-    return bids(
-        root=root,
-        datatype="surf",
-        suffix="midthickness.surf.gii",
-        space=get_unfold_ref_name(wildcards),
-        den="native",
-        hemi="{hemi}",
-        label="{label}",
-        **inputs.subj_wildcards,
-    )
-
 
 rule cp_atlas_unfold:
     input:
@@ -73,7 +48,16 @@ rule resample_native_surf_to_atlas_density:
             space="unfold",
             suffix="{surf_name}.surf.gii",
         ),
-        native_unfold=get_unfold_ref,
+        native_unfold=bids(
+            root=root,
+            datatype="surf",
+            suffix="midthickness.surf.gii",
+            space="unfoldreg",
+            den="native",
+            hemi="{hemi}",
+            label="{label}",
+            **inputs.subj_wildcards,
+        ),
     output:
         native_resampled=temp(
             bids(
@@ -125,7 +109,16 @@ rule resample_native_metric_to_atlas_density:
             space="unfold",
             suffix="midthickness.surf.gii",
         ),
-        native_unfold=get_unfold_ref,
+        native_unfold=bids(
+            root=root,
+            datatype="surf",
+            suffix="midthickness.surf.gii",
+            space="unfoldreg",
+            den="native",
+            hemi="{hemi}",
+            label="{label}",
+            **inputs.subj_wildcards,
+        ),
     output:
         metric_resampled=bids(
             root=root,
@@ -175,7 +168,16 @@ rule resample_native_coords_to_atlas_density:
             space="unfold",
             suffix="midthickness.surf.gii",
         ),
-        native_unfold=get_unfold_ref,
+        native_unfold=bids(
+            root=root,
+            datatype="surf",
+            suffix="midthickness.surf.gii",
+            space="unfoldreg",
+            den="native",
+            hemi="{hemi}",
+            label="{label}",
+            **inputs.subj_wildcards,
+        ),
     output:
         metric_resampled=bids(
             root=root,
@@ -209,7 +211,16 @@ rule resample_native_coords_to_atlas_density:
 # --- resampling from avgatlas to native vertices
 rule resample_atlas_subfields_to_native_surf:
     input:
-        native_unfold=get_unfold_ref,
+        native_unfold=bids(
+            root=root,
+            datatype="surf",
+            suffix="midthickness.surf.gii",
+            space="unfoldreg",
+            den="native",
+            hemi="{hemi}",
+            label="{label}",
+            **inputs.subj_wildcards,
+        ),
         label_gii=bids_atlas(
             root=get_atlas_dir(),
             template=config["atlas"],
@@ -331,7 +342,7 @@ rule atlas_label_to_unfold_nii:
         " -nearest-vertex 1000"
 
 
-rule affine_gii_corobl_to_orig:
+rule warp_gii_corobl_to_orig:
     input:
         gii=bids(
             root=root,
@@ -343,14 +354,57 @@ rule affine_gii_corobl_to_orig:
             label="{label}",
             **inputs.subj_wildcards,
         ),
+        warp=bids(
+            root=root,
+            datatype="warps",
+            **inputs.subj_wildcards,
+            suffix="xfm.nii.gz",
+            from_="corobl",
+            to="{modality}",
+            type_="itk",
+        ),
+    output:
+        gii=temp(
+            bids(
+                root=root,
+                datatype="{surfdir}",
+                den="{density}",
+                desc="warp",
+                suffix="{surfname}.surf.gii",
+                space="{modality}",
+                hemi="{hemi}",
+                label="{label,hipp|dentate}",
+                **inputs.subj_wildcards,
+            )
+        ),
+    conda:
+        "../envs/workbench.yaml"
+    group:
+        "subj"
+    shell:
+        "wb_command -surface-apply-warpfield {input.gii} {input.warp} {output.gii}"
+
+
+rule affine_gii_corobl_to_orig:
+    input:
+        gii=bids(
+            root=root,
+            datatype="{surfdir}",
+            den="{density}",
+            desc="warp",
+            suffix="{surfname}.surf.gii",
+            space="{modality}",
+            hemi="{hemi}",
+            label="{label,hipp|dentate}",
+            **inputs.subj_wildcards,
+        ),
         xfm=bids(
             root=root,
             datatype="warps",
             **inputs.subj_wildcards,
-            suffix="xfm.txt",
+            suffix="xfm.mat",
             from_="{modality}",
             to="corobl",
-            desc="affine",
             type_="ras",
         ),
     output:
@@ -359,7 +413,7 @@ rule affine_gii_corobl_to_orig:
             datatype="{surfdir}",
             den="{density}",
             suffix="{surfname}.surf.gii",
-            space="{modality,T1w|T2w}",
+            space="{modality}",
             hemi="{hemi}",
             label="{label,hipp|dentate}",
             **inputs.subj_wildcards,

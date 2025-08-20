@@ -1,26 +1,9 @@
-def get_labels_for_laplace(wildcards):
-    if (
-        config["skip_inject_template_labels"]
-        or config["analysis_level"] == "group_create_atlas"
-    ):
-        seg = get_input_for_shape_inject(wildcards)
-    else:
-        seg = bids(
-            root=root,
-            datatype="anat",
-            **inputs.subj_wildcards,
-            suffix="dseg.nii.gz",
-            desc="postproc",
-            space="corobl",
-            hemi="{hemi}",
-            label="{label}",
-        ).format(**wildcards)
-    return seg
+import numpy as np
 
 
 def get_gm_labels(wildcards):
     lbl_list = " ".join(
-        [str(lbl) for lbl in config["laplace_labels"][wildcards.label]["IO"]["gm"]]
+        [str(lbl) for lbl in config["laplace_labels"][wildcards.label]["gm"]]
     )
     return lbl_list
 
@@ -38,21 +21,24 @@ def get_src_sink_labels(wildcards):
 
 
 def get_nan_labels(wildcards):
-    lbl_list = " ".join(
-        [
-            str(lbl)
-            for lbl in config["laplace_labels"][wildcards.label]["AP"]["sink"]
-            + config["laplace_labels"][wildcards.label]["AP"]["src"]
-            + config["laplace_labels"][wildcards.label]["PD"]["sink"]
-            + config["laplace_labels"][wildcards.label]["PD"]["src"]
-        ]
-    )
+    gm_labels = set(map(int, config["laplace_labels"][wildcards.label]["gm"]))
+    all_labels = set(np.arange(1, 18))
+    missing_labels = sorted(all_labels - gm_labels)
+    lbl_list = " ".join([str(lbl) for lbl in missing_labels])
     return lbl_list
 
 
 rule get_label_mask:
     input:
-        labelmap=get_labels_for_laplace,
+        seg=bids(
+            root=root,
+            datatype="anat",
+            **inputs.subj_wildcards,
+            suffix="dseg.nii.gz",
+            desc="postproc",
+            space="corobl",
+            hemi="{hemi}",
+        ),
     params:
         labels=get_gm_labels,
     output:
@@ -76,29 +62,17 @@ rule get_label_mask:
         "c3d {input} -background -1 -retain-labels {params} -binarize {output}"
 
 
-def get_inputs_laplace(wildcards):
-    files = dict()
-    files["lbl"] = get_labels_for_laplace(wildcards)
-    if not config["skip_inject_template_labels"]:
-        files["init_coords"] = (
-            bids(
-                root=root,
-                datatype="coords",
-                **inputs.subj_wildcards,
-                dir="{dir}",
-                label="hipp",
-                suffix="coords.nii.gz",
-                desc="init",
-                space="corobl",
-                hemi="{hemi}",
-            ),
-        )
-    return files
-
-
 rule get_src_sink_mask:
     input:
-        labelmap=get_labels_for_laplace,
+        seg=bids(
+            root=root,
+            datatype="anat",
+            **inputs.subj_wildcards,
+            suffix="dseg.nii.gz",
+            desc="postproc",
+            space="corobl",
+            hemi="{hemi}",
+        ),
     params:
         labels=get_src_sink_labels,
     output:
@@ -161,7 +135,15 @@ rule get_src_sink_sdt:
 
 rule get_nan_mask:
     input:
-        labelmap=get_labels_for_laplace,
+        seg=bids(
+            root=root,
+            datatype="anat",
+            **inputs.subj_wildcards,
+            suffix="dseg.nii.gz",
+            desc="postproc",
+            space="corobl",
+            hemi="{hemi}",
+        ),
     params:
         labels=get_nan_labels,
     output:
@@ -186,45 +168,20 @@ rule get_nan_mask:
         "c3d {input} -background -1 -retain-labels {params} -binarize {output}"
 
 
-rule create_upsampled_coords_ref:
+rule smooth_synthlayer:
     input:
-        seg=get_input_for_shape_inject,
-    params:
-        tight_crop_labels=lambda wildcards: config["tight_crop_labels"][wildcards.label],
-        resample_res=lambda wildcards: config[f"laminar_coords_res_{wildcards.label}"],
-        trim_padding="5mm",
-    output:
-        upsampled_ref=temp(
-            bids(
-                root=root,
-                datatype="anat",
-                **inputs.subj_wildcards,
-                suffix="ref.nii.gz",
-                desc="resampled",
-                space="corobl",
-                label="{label}",
-                hemi="{hemi}",
-            )
+        dseg_tissue=bids(
+            root=root,
+            datatype="anat",
+            **inputs.subj_wildcards,
+            suffix="dseg.nii.gz",
+            desc="postproc",
+            space="corobl",
+            hemi="{hemi}",
         ),
-    conda:
-        "../envs/c3d.yaml"
-    group:
-        "subj"
-    shell:
-        "c3d {input} -retain-labels {params.tight_crop_labels} -trim {params.trim_padding} -resample-mm {params.resample_res} -o {output}"
-
-
-rule prep_dseg_for_laynii:
-    input:
-        dseg_tissue=get_labels_for_laplace,
     params:
         gm_labels=lambda wildcards: " ".join(
-            [
-                str(lbl)
-                for lbl in config["laplace_labels"][wildcards.label][wildcards.dir][
-                    "gm"
-                ]
-            ]
+            [str(lbl) for lbl in config["laplace_labels"][wildcards.label]["gm"]]
         ),
         src_labels=lambda wildcards: " ".join(
             [
@@ -242,41 +199,7 @@ rule prep_dseg_for_laynii:
                 ]
             ]
         ),
-    output:
-        dseg_rim=temp(
-            bids(
-                root=root,
-                datatype="anat",
-                **inputs.subj_wildcards,
-                suffix="dseg.nii.gz",
-                dir="{dir,IO}",
-                desc="laynii",
-                label="{label}",
-                space="corobl",
-                hemi="{hemi}",
-            )
-        ),
-    conda:
-        "../envs/c3d.yaml"
-    group:
-        "subj"
-    shell:
-        "c3d -background -1 {input} -as DSEG -retain-labels {params.gm_labels} -binarize -scale 3 -popas GM -push DSEG -retain-labels {params.src_labels} -binarize -scale 2 -popas WM -push DSEG -retain-labels {params.sink_labels} -binarize -scale 1 -popas PIAL -push GM -push WM -add -push PIAL -add -o {output}"
-
-
-rule laynii_layers_equidist:
-    input:
-        dseg_rim=bids(
-            root=root,
-            datatype="anat",
-            **inputs.subj_wildcards,
-            suffix="dseg.nii.gz",
-            dir="{dir}",
-            desc="laynii",
-            label="{label}",
-            space="corobl",
-            hemi="{hemi}",
-        ),
+        sigma=1.0,  # in voxels
     output:
         equidist=temp(
             bids(
@@ -291,13 +214,11 @@ rule laynii_layers_equidist:
                 **inputs.subj_wildcards,
             )
         ),
-    shadow:
-        "minimal"
     conda:
-        "../envs/laynii.yaml"
+        "../envs/pyunfold.yaml"
     log:
         bids_log(
-            "laynii_layers_equidist",
+            "smooth_synthlayer",
             **inputs.subj_wildcards,
             dir="{dir, IO}",
             label="{label}",
@@ -305,54 +226,5 @@ rule laynii_layers_equidist:
         ),
     group:
         "subj"
-    shell:
-        "cp {input} dseg.nii.gz && "
-        "LN2_LAYERS  -rim dseg.nii.gz &> {log} && "
-        "cp dseg_metric_equidist.nii.gz {output.equidist}"
-
-
-rule laynii_layers_equivol:
-    input:
-        dseg_rim=bids(
-            root=root,
-            datatype="anat",
-            **inputs.subj_wildcards,
-            suffix="dseg.nii.gz",
-            dir="{dir}",
-            desc="laynii",
-            label="{label}",
-            space="corobl",
-            hemi="{hemi}",
-        ),
-    output:
-        equivol=temp(
-            bids(
-                root=root,
-                datatype="coords",
-                dir="{dir,IO}",
-                label="{label}",
-                suffix="coords.nii.gz",
-                desc="equivol",
-                space="corobl",
-                hemi="{hemi}",
-                **inputs.subj_wildcards,
-            )
-        ),
-    shadow:
-        "minimal"
-    conda:
-        "../envs/laynii.yaml"
-    log:
-        bids_log(
-            "laynii_layers_equivol",
-            **inputs.subj_wildcards,
-            dir="{dir, IO}",
-            label="{label}",
-            hemi="{hemi}",
-        ),
-    group:
-        "subj"
-    shell:
-        "cp {input} dseg.nii.gz && "
-        "LN2_LAYERS  -rim dseg.nii.gz -equivol &> {log} && "
-        "cp dseg_metric_equivol.nii.gz {output.equivol}"
+    script:
+        "../scripts/smooth_synthlayer.py"

@@ -77,13 +77,6 @@ def get_avg_or_cp_scans_cmd(wildcards, input, output):
     return cmd
 
 
-def get_modality_suffix(modality):
-    if modality[:4] == "hipp":
-        return modality[4:]
-    else:
-        return modality
-
-
 def get_inputs_spec_file(label, density):
 
     files = []
@@ -265,25 +258,21 @@ def get_final_subfields():
 
 def get_final_anat():
     anat = []
-    if "T1w" in ref_spaces or "T2w" in ref_spaces:
-        anat.extend(
-            inputs[config["modality"]].expand(
-                bids(
-                    root=root,
-                    datatype="anat",
-                    desc="preproc",
-                    suffix="{modality_suffix}.nii.gz".format(
-                        modality_suffix=get_modality_suffix(config["modality"])
-                    ),
-                    space="{space}",
-                    hemi="{hemi}",
-                    **inputs.subj_wildcards,
-                ),
-                space=crop_ref_spaces,
-                hemi=config["hemi"],
-                allow_missing=True,
-            )
+    anat.extend(
+        inputs[config["modality"]].expand(
+            bids(
+                root=root,
+                datatype="anat",
+                suffix=config["modality"] + ".nii.gz",
+                space="{space}",
+                hemi="{hemi}",
+                **inputs.subj_wildcards,
+            ),
+            space=crop_ref_spaces,
+            hemi=config["hemi"],
+            allow_missing=True,
         )
+    )
     return anat
 
 
@@ -343,39 +332,36 @@ def get_final_qc():
             allow_missing=True,
         )
     )
-    if len(config["hemi"]) == 2:
-        qc.extend(
-            inputs[config["modality"]].expand(
-                bids(
-                    root=root,
-                    datatype="qc",
-                    desc="subfields",
-                    space="{space}",
-                    atlas="{atlas}",
-                    suffix="volumes.png",
-                    **inputs.subj_wildcards,
-                ),
-                space=crop_ref_spaces,
-                atlas=config["atlas"],
-                allow_missing=True,
-            )
+    qc.extend(
+        inputs[config["modality"]].expand(
+            bids(
+                root=root,
+                datatype="qc",
+                desc="subfields",
+                space="{space}",
+                atlas="{atlas}",
+                suffix="volumes.png",
+                **inputs.subj_wildcards,
+            ),
+            space=crop_ref_spaces,
+            atlas=config["atlas"],
+            allow_missing=True,
         )
-    if (config["modality"] == "T1w") or (config["modality"] == "T2w"):
-        if not config["use_template_seg"]:
-            qc.extend(
-                inputs[config["modality"]].expand(
-                    bids(
-                        root=root,
-                        datatype="qc",
-                        desc="unetf3d",
-                        suffix="dice.tsv",
-                        hemi="{hemi}",
-                        **inputs.subj_wildcards,
-                    ),
-                    hemi=config["hemi"],
-                    allow_missing=True,
-                )
-            )
+    )
+    qc.extend(
+        inputs[config["modality"]].expand(
+            bids(
+                root=root,
+                datatype="qc",
+                desc="unetf3d",
+                suffix="dice.tsv",
+                hemi="{hemi}",
+                **inputs.subj_wildcards,
+            ),
+            hemi=config["hemi"],
+            allow_missing=True,
+        )
+    )
     return qc
 
 
@@ -395,15 +381,11 @@ if "corobl" in ref_spaces:
 
 def get_cifti_metric_types(label):
     types_list = config["cifti_metric_types"][label]
-    if config["generate_myelin_map"]:
-        types_list.append("myelin.dscalar")
     return types_list
 
 
 def get_gifti_metric_types(label):
     types_list = config["gifti_metric_types"][label]
-    if config["generate_myelin_map"]:
-        types_list.append("myelin.shape")
     return types_list
 
 
