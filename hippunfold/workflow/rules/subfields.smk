@@ -2,7 +2,8 @@ rule import_dseg_subfields:
     """read in volumetric subfield dseg, used for group_create_atlas only"""
     input:
         vol_dseg=partial(get_single_bids_input, component="dsegsubfields"),
-        label_list=Path(workflow.basedir) / "../resources/atlas-v2/labellist_withdg.txt",
+        label_list=Path(workflow.basedir)
+        / "../resources/label_lut/labellist_withdg.txt",
     output:
         label_dseg=temp(
             bids(
@@ -106,7 +107,7 @@ rule native_label_gii_to_unfold_nii:
         ),
         ref_nii=bids(
             root=root,
-            datatype="anat",
+            datatype="warps",
             suffix="refvol.nii.gz",
             space="unfold",
             desc="slice",
@@ -136,7 +137,10 @@ rule native_label_gii_to_unfold_nii:
         " {params.interp}"
 
 
-rule label_subfields_from_vol_coords_corobl:
+rule map_surf_subfields_to_volume:
+    """ surface to volume mapping to obtain subfields in volume space - note: these are
+    jittered wrt original volumetric segmentations because of smoothing and interpolation
+    so are ultimately used with nearest voxel mapping in the label_gm_with_nearest_subfields rule"""
     input:
         ref_nii=bids(
             root=root,
@@ -207,15 +211,29 @@ rule label_subfields_from_vol_coords_corobl:
         "subj"
     log:
         bids_log(
-            "label_subfields_from_vol_coords_corobl",
+            "map_nearest_surf_subfields_to_volume",
             **inputs.subj_wildcards,
             hemi="{hemi}",
             label="{label}",
             atlas="{atlas}",
         ),
     shell:
-        "wb_command -label-to-volume-mapping {input.label_gii} {input.midthickness_surf} {input.ref_nii} {output.nii_label} &>> {log}"
+        "wb_command -label-to-volume-mapping {input.label_gii} {input.midthickness_surf} {input.ref_nii} {output.nii_label}"
         " -ribbon-constrained {input.inner_surf} {input.outer_surf} &>> {log}"
+
+
+def get_tissue_atlas_remapping_dentate(wildcards):
+    mapping = config["tissue_atlas_mapping"]
+
+    remap = []
+
+    for label in ["dg"]:
+        in_label = mapping["tissue"][label]
+        out_label = mapping.get(wildcards.atlas, mapping.get("default"))[label]
+
+        remap.append(f"-threshold {in_label} {in_label} {out_label} 0 -popas {label}")
+
+    return " ".join(remap)
 
 
 def get_tissue_atlas_remapping(wildcards):
@@ -230,6 +248,100 @@ def get_tissue_atlas_remapping(wildcards):
         remap.append(f"-threshold {in_label} {in_label} {out_label} 0 -popas {label}")
 
     return " ".join(remap)
+
+
+rule combine_dentate_subfield_labels_corobl:
+    """Combine subfield labels with the DG"""
+    input:
+        tissue=get_labels_for_laplace,
+        subfields=bids(
+            root=root,
+            datatype="anat",
+            desc="subfieldsnotissue",
+            suffix="dseg.nii.gz",
+            space="corobl",
+            hemi="{hemi}",
+            atlas="{atlas}",
+            label="{label}",
+            **inputs.subj_wildcards,
+        ),
+    params:
+        remap=get_tissue_atlas_remapping_dentate,
+    output:
+        combined=temp(
+            bids(
+                root=root,
+                datatype="anat",
+                desc="subfieldsnotissuewithdentate",
+                suffix="dseg.nii.gz",
+                space="corobl",
+                hemi="{hemi}",
+                label="{label,hipp}",
+                atlas="{atlas}",
+                **inputs.subj_wildcards,
+            )
+        ),
+    conda:
+        "../envs/c3d.yaml"
+    group:
+        "subj"
+    shell:
+        "c3d {input.tissue} -dup -dup {params.remap} {input.subfields} -push dg -max -type uchar -o {output}"
+
+
+rule label_gm_with_nearest_subfields:
+    """ Labels the GM mask with the nearest subfield from surface to volume mapping, after dentate
+    has been added in"""
+    input:
+        subfields=bids(
+            root=root,
+            datatype="anat",
+            desc="subfieldsnotissuewithdentate",
+            suffix="dseg.nii.gz",
+            space="corobl",
+            hemi="{hemi}",
+            atlas="{atlas}",
+            label="{label,hipp}",
+            **inputs.subj_wildcards,
+        ),
+        gm=bids(
+            root=root,
+            datatype="coords",
+            suffix="mask.nii.gz",
+            space="corobl",
+            desc="GM",
+            hemi="{hemi}",
+            label="{label}",
+            **inputs.subj_wildcards,
+        ),
+    output:
+        subfields=temp(
+            bids(
+                root=root,
+                datatype="anat",
+                desc="subfieldsnotissuewithdentatemasked",
+                suffix="dseg.nii.gz",
+                space="corobl",
+                hemi="{hemi}",
+                atlas="{atlas}",
+                label="{label,hipp}",
+                **inputs.subj_wildcards,
+            )
+        ),
+    conda:
+        "../envs/pyunfold.yaml"
+    group:
+        "subj"
+    log:
+        bids_log(
+            "label_gm_with_nearest_subfields",
+            **inputs.subj_wildcards,
+            hemi="{hemi}",
+            label="{label}",
+            atlas="{atlas}",
+        ),
+    script:
+        "../scripts/label_gm_with_nearest_subfields.py"
 
 
 rule combine_tissue_subfield_labels_corobl:
@@ -253,7 +365,7 @@ rule combine_tissue_subfield_labels_corobl:
         subfields=bids(
             root=root,
             datatype="anat",
-            desc="subfieldsnotissue",
+            desc="subfieldsnotissuewithdentatemasked",
             suffix="dseg.nii.gz",
             space="corobl",
             hemi="{hemi}",

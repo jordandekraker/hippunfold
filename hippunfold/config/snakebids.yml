@@ -281,19 +281,6 @@ unfold_vol_ref:
     orient: RPI
 
 
-# space for uniform unfolded grid:
-#  currently only used for interpolating hipp subfields on surface
-unfold_mesh_ref:
-  dims:
-   - 254
-   - 126
-  start:
-   - 0.234375
-   - 0.234375
-  end:
-   - 39.765625
-   - 19.765625
-
 shape_inject:
   labels_reg: 
     - 1
@@ -370,6 +357,7 @@ laplace_labels:
         - 13
          -14
         - 18
+
 
 resample_dseg_for_templatereg: 0.3x0.3x0.3mm
 unfoldreg_padding: 0x0x0vox
