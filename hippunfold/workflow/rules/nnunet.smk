@@ -11,7 +11,7 @@ rule run_inference:
             **inputs.subj_wildcards,
         ),
     params:
-        model_weights=workflow.basedir + "/../resources/models/model_epoch100.pth",
+        model_weights=workflow.basedir + "/../resources/models/model_epoch2k.ckpt",
         device="cuda" if config["use_gpu"] else "cpu",
     output:
         nii=temp(
